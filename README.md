@@ -7,14 +7,20 @@
 > git remote set-url origin https://github.com/LIN4CRE/Git-Sync.git
 > ```
 
+---
+
 ## Features
 
 - ✅ **Smart Semantic Versioning** – Auto bump Patch / Minor / Major
-- ✅ **Multi-Account Support** – Works with multiple GitHub accounts (LIN4CRE, DLinacre, etc.)
+- ✅ **Multi-Account Support** – Works with multiple GitHub accounts (e.g., `LIN4CRE`, `DLinacre`, etc.)
 - ✅ **Hacker-Style UI** – Progress bars, status ticks, and clean output
-- ✅ **QoL Switches** – Continue on error, logging, pause between repos, etc.
+- ✅ **QoL Switches** – Continue on error, logging, pause between repos, and more
 - ✅ **One-Click Desktop Shortcut** – Run bulk sync with a single click
 - ✅ **Full Logging Mode** – Silent operation with detailed log files
+- ✅ **Dry Run Mode** – Preview what would happen without making changes
+- ✅ **Automatic Rollback Guidance** – Clear instructions if a release fails part-way
+
+---
 
 ## Quick Start
 
@@ -25,10 +31,14 @@ git clone https://github.com/LIN4CRE/Git-Sync.git
 cd Git-Sync
 ```
 
-### 2. Make scripts executable (PowerShell)
+### 2. Unblock scripts (Windows)
+
+Right-click each `.ps1` file → **Properties** → check **Unblock** (if present).
+
+Alternatively, run:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process
+Get-ChildItem *.ps1 | Unblock-File
 ```
 
 ### 3. Run the Hacker UI (Recommended)
@@ -53,11 +63,13 @@ Set-ExecutionPolicy Bypass -Scope Process
 .\Create-DesktopShortcut.ps1
 ```
 
+---
+
 ## QoL Switches
 
 | Switch | Description |
 |---|---|
-| `-AutoSwitchGh` | Automatically switch GitHub CLI accounts per repo |
+| `-AutoSwitchGh` | Automatically switch GitHub CLI (`gh`) accounts per repo |
 | `-ContinueOnError` | Keep going if one repo fails |
 | `-ShowGitStatus` | Show changed files per repo |
 | `-PauseBetweenRepos` | Pause after each repository |
@@ -66,6 +78,9 @@ Set-ExecutionPolicy Bypass -Scope Process
 | `-WhatIf` | Dry run mode |
 | `-Confirm` | Ask before starting |
 | `-NoColor` | Disable ANSI colors (for log files / CI) |
+| `-Force` | Overwrite existing tags and use `--force-with-lease` on push |
+
+---
 
 ## Folder Structure (Recommended)
 
@@ -82,11 +97,23 @@ D:\
 
 The tool automatically detects which account each repo belongs to by inspecting the Git remote URL.
 
+---
+
 ## Requirements
 
-- PowerShell 5.1 or 7+
-- Git
-- GitHub CLI (`gh`) – required for `-AutoSwitchGh` and release creation
+- **PowerShell 5.1 or 7+** (Windows)
+- **Git** for Windows
+- **GitHub CLI (`gh`)** – required for `-AutoSwitchGh` and release creation
+
+> This toolkit is designed primarily for Windows environments. Linux/macOS users may need to adapt paths and the desktop shortcut script.
+
+---
+
+## Installation
+
+See [INSTALLATION.md](INSTALLATION.md) for detailed setup instructions, including environment configuration, Git installation, and `gh` CLI multi-account setup.
+
+---
 
 ## Desktop Shortcut
 
@@ -101,6 +128,8 @@ To remove the shortcut later:
 ```powershell
 .\Create-DesktopShortcut.ps1 -Remove
 ```
+
+---
 
 ## Easy Customization (Change Commands & Folders)
 
@@ -136,6 +165,8 @@ You can also set a different default `Action`:
 [string[]]$BaseFolders = @("D:\Work", "D:\Personal", "D:\OpenSource")
 ```
 
+---
+
 ## Logging Mode (Silent)
 
 ```powershell
@@ -144,31 +175,86 @@ You can also set a different default `Action`:
 
 Log files are also auto-generated in the script directory. See `*.log` files for full output.
 
+---
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---|---|
-| `Test-GitRemoteConnectivity` not found | This was a missing function — fixed in the latest version. Pull the newest files. |
 | `gh auth switch` fails | Ensure you are logged in to all accounts: `gh auth login` for each one. |
 | Release says "already exists" | Use `-Force` to overwrite, or delete the existing tag first. |
 | No repos discovered | Check that `$BaseFolders` paths are correct and repos contain a `.git` folder. |
 | Colors look wrong in your terminal | Use `-NoColor` to disable ANSI escape codes. |
-| Script won't run | Check execution policy: `Get-ExecutionPolicy`. Use `Set-ExecutionPolicy Bypass -Scope Process` for the current session. |
+| Script won't run | Check execution policy: `Get-ExecutionPolicy`. If files are blocked, run `Unblock-File` on them. For a single session, use `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`. |
+| Missing dependency `git-automation-enhanced.ps1` | Ensure all files are kept in the same directory. |
+
+---
+
+## Build & Test
+
+We provide a `build.ps1` script that handles unblocking, linting, and testing in one step.
+
+```powershell
+# Run the full build (unblocks files, installs dependencies, runs linter + tests)
+.\build.ps1
+
+# Skip tests or linter if you only need one step
+.\build.ps1 -SkipTest
+.\build.ps1 -SkipAnalyze
+```
+
+Or run Pester directly after unblocking files:
+
+```powershell
+Get-ChildItem *.ps1, *.psm1, *.psd1 | Unblock-File
+Import-Module Pester -Force
+Invoke-Pester -Path .\tests\Git-Sync.Tests.ps1
+```
+
+A CI pipeline is included under `.github/workflows/ci.yml` to run `PSScriptAnalyzer` and `Pester` tests on every pull request.
+
+### PowerShell Module (Advanced)
+
+The core functions are packaged as a proper PowerShell module (`Git-Sync.psd1` / `Git-Sync.psm1`). You can import it directly for use in your own scripts:
+
+```powershell
+Import-Module .\Git-Sync.psd1 -Force
+Get-Command -Module Git-Sync
+```
+
+---
 
 ## Contributing
 
 Pull requests welcome! This tool was built to make managing multiple GitHub accounts effortless.
 
-Please:
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, branch naming, and the pull request process.
+
 1. Fork the repo
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+---
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes.
+
+---
+
+## Security
+
+If you discover a security vulnerability, please review our [SECURITY.md](SECURITY.md) for disclosure guidelines.
+
+---
+
+## Code of Conduct
+
+This project adheres to the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
+---
 
 ## License
 

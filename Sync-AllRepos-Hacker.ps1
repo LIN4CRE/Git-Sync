@@ -1,23 +1,27 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
- Hacker-style Multi-Account Git Sync Tool v2.2
- Features: Progress bars, account switching, QoL switches, visual status
+    Hacker-style Multi-Account Git Sync Tool v2.3
+    Features: Progress bars, account switching, QoL switches, visual status
 
 .DESCRIPTION
- Syncs multiple Git repositories across different GitHub accounts with
- smart versioning, bulk operations, and a beautiful terminal UI.
+    Syncs multiple Git repositories across different GitHub accounts with
+    smart versioning, bulk operations, and a beautiful terminal UI.
 
 .VERSION
- 2.2.0 - 2026-06-06
- - Renamed from Git-Multi-Sync to Git-Sync
- - Fixed missing Test-GitRemoteConnectivity function
- - Fixed GH_HOST misuse (now uses gh profile management)
- - Fixed $GenerateNotes switch default issue
- - Improved error handling and null-safety
- - Optimized array building with ArrayList
- - Added -NoColor switch support throughout
- - Added -Remove switch to Create-DesktopShortcut.ps1
+    2.3.0 - 2026-06-06
+    - Fixed New-GitRelease parameter binding (ParameterSet AutoBump vs Manual)
+    - Fixed Get-LatestTag to strip 'v' prefix
+    - Fixed repo discovery to use immediate children (removed -Recurse)
+    - Fixed GitHub username regex to allow hyphens
+    - Fixed LogFile relative path resolution and directory creation
+    - Fixed double error/warning messages in helper functions
+    - Fixed Force implementation for git push --force-with-lease and tag overwrite
+    - Added Set-StrictMode
+    - Added empty account handling in Switch-GhAccount
+    - Moved dependency loading outside the per-repo loop
+    - Added validation for -BumpVersion when Action is Release or Both
+    - Fixed success/skip counting to avoid misleading totals
 #>
 
 param(
@@ -43,7 +47,24 @@ param(
     [string]$LogFile            # Path to write full log (silent mode when used)
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'
+
+# Validate required parameters
+if ($Action -in @('Release','Both') -and -not $BumpVersion) {
+    throw "Parameter -BumpVersion is required when Action is '$Action'."
+}
+
+# Resolve LogFile to absolute path early so it doesn't change per-repo
+if ($LogFile) {
+    if (-not [System.IO.Path]::IsPathRooted($LogFile)) {
+        $LogFile = Join-Path $PSScriptRoot $LogFile
+    }
+    $logDir = Split-Path $LogFile -Parent
+    if (-not (Test-Path $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+}
 
 # ==================== HACKER STYLE UI ====================
 $esc = [char]27
@@ -51,7 +72,6 @@ $esc = [char]27
 function Write-Hacker {
     param([string]$Text, [string]$Color = 'Green', [switch]$NoNewline)
 
-    # Always log if LogFile is specified
     if ($LogFile) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         Add-Content -Path $LogFile -Value "[$timestamp] $Text" -ErrorAction SilentlyContinue
@@ -92,7 +112,7 @@ function Show-Switch {
     $status = if ($Enabled) { "ON " } else { "OFF" }
     $color = if ($Enabled) { "Green" } else { "DarkGray" }
     Write-Hacker " [ $status ] $Name" $color
-    if ($Description) { Write-Hacker " $Description" "DarkGray" }
+    if ($Description) { Write-Hacker "  $Description" "DarkGray" }
 }
 
 function Show-RepoStatus {
@@ -123,7 +143,7 @@ function Get-GitHubAccountFromRepo {
     Push-Location $RepoPath
     try {
         $remote = git remote get-url origin 2>$null
-        if ($remote -match 'github\.com[:/](\w+)/') { return $matches[1] }
+        if ($remote -match 'github\.com[:/]([\w-]+)/') { return $matches[1] }
     } finally { Pop-Location }
     return $null
 }
@@ -132,7 +152,11 @@ function Switch-GhAccount {
     param([string]$TargetAccount)
     if (-not $AutoSwitchGh) { return $true }
 
-    # Check if gh is available
+    if ([string]::IsNullOrWhiteSpace($TargetAccount)) {
+        Write-Hacker " [WARN] Cannot switch gh account: target account is empty" "Yellow"
+        return $false
+    }
+
     if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
         Write-Hacker " [WARN] gh CLI not found, skipping account switch" "Yellow"
         return $false
@@ -159,7 +183,7 @@ function Switch-GhAccount {
 }
 
 # ==================== MAIN HACKER UI ====================
-if (-not $NoColor) { Clear-Host }
+if ($Host.UI.SupportsVirtualTerminal -and -not $NoColor) { Clear-Host }
 
 Write-Hacker @"
 ╔══════════════════════════════════════════════════════════╗
@@ -179,7 +203,7 @@ Write-Hacker @"
 ╚══════════════════════════════════════════════════════════╝
 "@ "Green"
 
-Write-Hacker "`n[ GIT-SYNC v2.2 ]" "Cyan"
+Write-Hacker "`n[ GIT-SYNC v2.3 ]" "Cyan"
 Write-Hacker "Accounts : $($BaseFolders -join ' | ')" "DarkGray"
 Write-Hacker "Action   : $Action" "DarkGray"
 Write-Hacker "──────────────────────────────────────────────────────`n" "DarkGray"
@@ -201,26 +225,27 @@ if ($Confirm) {
 }
 
 # ==================== DISCOVERY ====================
-$totalRepos = 0
 $repoList = [System.Collections.ArrayList]::new()
 
 foreach ($folder in $BaseFolders) {
     if (Test-Path $folder) {
-        $repos = Get-ChildItem $folder -Directory -Recurse | Where-Object { Test-Path (Join-Path $_.FullName ".git") }
+        $repos = Get-ChildItem $folder -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".git") }
         foreach ($r in $repos) {
             $account = Get-GitHubAccountFromRepo -RepoPath $r.FullName
             if (-not $account) { $account = (Split-Path $folder -Leaf) }
+            if ([string]::IsNullOrWhiteSpace($account)) { $account = "Unknown" }
             $null = $repoList.Add([PSCustomObject]@{
                 Path    = $r.FullName
                 Name    = $r.Name
                 Account = $account
             })
         }
-        $totalRepos += $repos.Count
     } else {
         Write-Hacker " [WARN] Base folder not found: $folder" "Yellow"
     }
 }
+
+$totalRepos = $repoList.Count
 
 Write-Hacker "Discovered $totalRepos repositories across $($BaseFolders.Count) accounts`n" "Yellow"
 
@@ -230,19 +255,30 @@ if ($totalRepos -eq 0) {
 }
 
 # ==================== VALIDATION ====================
-# Check for required dependency script
-$depScript = Join-Path $PSScriptRoot "git-automation-enhanced.ps1"
-if (-not (Test-Path $depScript)) {
-    Write-Hacker " [ERROR] Missing dependency: git-automation-enhanced.ps1" "Red"
-    Write-Hacker "         Please ensure all Git-Sync files are in the same directory." "Red"
+$modulePath = Join-Path $PSScriptRoot "Git-Sync.psd1"
+if (-not (Test-Path $modulePath)) {
+    Write-Hacker " [ERROR] Missing dependency: Git-Sync module (Git-Sync.psd1)" "Red"
+    Write-Hacker "         Please ensure the Git-Sync module is in the same directory." "Red"
     return
 }
+
+# Load the module once (avoids repeated dot-sourcing overhead and console spam)
+Import-Module $modulePath -Force
 
 # ==================== PROCESSING ====================
 $allResults = [System.Collections.ArrayList]::new()
 $processed = 0
 $successCount = 0
 $failCount = 0
+$skipCount = 0
+
+# Prepare parameter splats for deploy and release (avoids passing unbound params)
+$deployParams = @{}
+if ($Force) { $deployParams.Force = $true }
+
+$releaseParams = @{}
+if ($BumpVersion) { $releaseParams.Bump = $BumpVersion }
+if ($Force) { $releaseParams.Force = $true }
 
 foreach ($repo in $repoList) {
     $processed++
@@ -256,28 +292,26 @@ foreach ($repo in $repoList) {
 
     Push-Location $repo.Path
     try {
-        if (-not $WhatIf) {
-            . $depScript | Out-Null
-
-            $params = @{}
-            if ($BumpVersion) { $params.Bump = $BumpVersion }
-            if ($Force) { $params.Force = $true }
-
+        if ($WhatIf) {
+            $status = "Skipped"
+            $skipCount++
+        } else {
             switch ($Action) {
                 'Deploy' {
-                    Invoke-GitDeploy -Message "Bulk sync [$detectedAccount]" @params -ErrorAction Stop | Out-Null
+                    Invoke-GitDeploy -Message "Bulk sync [$detectedAccount]" @deployParams -ErrorAction Stop | Out-Null
                 }
                 'Release' {
-                    New-GitRelease @params -ErrorAction Stop | Out-Null
+                    New-GitRelease @releaseParams -ErrorAction Stop | Out-Null
                 }
                 'Both' {
-                    Invoke-GitDeploy -Message "Bulk sync [$detectedAccount]" @params -ErrorAction Stop | Out-Null
-                    New-GitRelease @params -ErrorAction Stop | Out-Null
+                    Invoke-GitDeploy -Message "Bulk sync [$detectedAccount]" @deployParams -ErrorAction Stop | Out-Null
+                    New-GitRelease @releaseParams -ErrorAction Stop | Out-Null
                 }
             }
+            $status = "Success"
+            $successCount++
         }
 
-        $status = if ($WhatIf) { "Skipped" } else { "Success" }
         if (-not $OnlyShowFailures) {
             Show-RepoStatus -RepoName $repo.Name -Account $detectedAccount -Status $status
         }
@@ -285,7 +319,8 @@ foreach ($repo in $repoList) {
         if ($ShowGitStatus) {
             $statusOutput = git status --short 2>$null
             if ($statusOutput) {
-                Write-Hacker " └─ Changes: $($statusOutput.Count) files" "DarkGray"
+                $changeCount = if ($statusOutput -is [array]) { $statusOutput.Count } else { 1 }
+                Write-Hacker "  └─ Changes: $changeCount files" "DarkGray"
             }
         }
 
@@ -294,8 +329,6 @@ foreach ($repo in $repoList) {
             Repo    = $repo.Name
             Status  = $status
         })
-        $successCount++
-
     }
     catch {
         $errorMsg = if ($null -ne $_.Exception.Message) { $_.Exception.Message } else { "Unknown error" }
@@ -328,17 +361,15 @@ Write-Hacker "`n═════════════════════�
 Write-Hacker " SYNC COMPLETE" "Green"
 Write-Hacker "══════════════════════════════════════════════════════════════════════════════`n" "DarkGray"
 
-$skipped = ($allResults | Where-Object Status -eq 'Skipped').Count
-
 Write-Hacker "✓ Successful : $successCount" "Green"
 Write-Hacker "✗ Failed     : $failCount" "Red"
-Write-Hacker "○ Skipped    : $skipped" "Yellow"
+Write-Hacker "○ Skipped    : $skipCount" "Yellow"
 
 if ($failCount -gt 0 -and -not $OnlyShowFailures) {
     Write-Hacker "`n[ FAILED REPOSITORIES ]" "Red"
     $allResults | Where-Object Status -eq 'Failed' | ForEach-Object {
         $err = if ($null -ne $_.Error) { $_.Error } else { "No details" }
-        Write-Hacker " ✗ $($_.Repo) [$($_.Account)] → $err" "Red"
+        Write-Hacker "  ✗ $($_.Repo) [$($_.Account)] → $err" "Red"
     }
 }
 

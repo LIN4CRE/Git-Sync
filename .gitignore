@@ -1,0 +1,33 @@
+# Logs
+*.log
+logs/
+
+# PowerShell artifacts
+*.zip
+*.lnk
+*.ps1xml
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp files
+*.tmp
+*.temp
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Build output
+out/
+dist/
+coverage/
+
+# Pester test results
+TestResults.xml
+testResults/
