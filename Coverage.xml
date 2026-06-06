@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" "report.dtd"[]>
-<report name="Pester (06/06/2026 15:16:07)">
-  <sessioninfo id="this" start="1780758965811" dump="1780758967057" />
+<report name="Pester (06/06/2026 15:26:01)">
+  <sessioninfo id="this" start="1780759561148" dump="1780759561910" />
   <package name="Git-Sync">
     <class name="Git-Sync/Git-Sync" sourcefilename="Git-Sync.psm1">
       <method name="&lt;script&gt;" desc="()" line="27">

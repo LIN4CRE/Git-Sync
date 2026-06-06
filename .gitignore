@@ -29,5 +29,5 @@ dist/
 coverage/
 
 # Pester test results
-TestResults.xml
+# TestResults.xml (Removing from ignore to allow publishing results)
 testResults/
