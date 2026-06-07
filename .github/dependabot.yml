@@ -1,0 +1,35 @@
+# Dependabot configuration
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Git-Sync has no language-level dependency manifest (it depends only on
+# `git`, `gh`, Pester, and PSScriptAnalyzer — all installed at runtime).
+# We therefore monitor GitHub Actions pinning, which is the only file
+# format Dependabot understands here.
+#
+# To enable Pester / PSScriptAnalyzer version monitoring in the future,
+# track them via a Renovate config or a custom CI step that compares
+# `Find-Module` versions against `build.ps1` minima.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/London"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "ci"
+    reviewers:
+      - "LIN4CRE"
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

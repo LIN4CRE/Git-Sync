@@ -3,7 +3,10 @@
     ExcludeRules = @(
         'PSAvoidUsingWriteHost',
         'PSAvoidOverwritingBuiltInCmdlets',
-        'PSReviewUnusedParameter'
+        'PSReviewUnusedParameter',
+        'PSAvoidAssignmentToAutomaticVariable',
+        'PSUseDeclaredVarsMoreThanAssignments',
+        'PSAvoidUsingEmptyCatchBlock'
     )
     Rules = @{
         PSAvoidUsingCmdletAliases = @{

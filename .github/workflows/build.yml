@@ -1,0 +1,100 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master, "release/**"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: PSScriptAnalyzer
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Force -SkipPublisherCheck
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $settings = if (Test-Path .\PSScriptAnalyzerSettings.psd1) { '.\PSScriptAnalyzerSettings.psd1' } else { $null }
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings $settings
+          if ($results) {
+            $results | Format-Table -AutoSize | Out-String | Write-Host
+            $errors = $results | Where-Object Severity -eq 'Error'
+            $warnings = $results | Where-Object Severity -eq 'Warning'
+            Write-Host "::error::PSScriptAnalyzer found $($errors.Count) error(s) and $($warnings.Count) warning(s)."
+            exit 1
+          }
+          Write-Host "::notice::PSScriptAnalyzer: clean ✅"
+
+  manifest:
+    name: Module Manifest Validation
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test-ModuleManifest
+        shell: pwsh
+        run: |
+          $manifest = Test-ModuleManifest -Path .\Git-Sync.psd1
+          Write-Host "✅ Manifest valid: $($manifest.Name) v$($manifest.Version)"
+          Write-Host "Exported functions: $($manifest.ExportedFunctions.Keys -join ', ')"
+
+      - name: Import-Module dry-run
+        shell: pwsh
+        run: |
+          Import-Module .\Git-Sync.psd1 -Force -ErrorAction Stop
+          $expected = @(
+            'Get-NextVersion','Test-GitRepository','Test-GitRemoteConnectivity',
+            'Invoke-GitCommand','Test-GhAuthentication','Get-LatestTag',
+            'Invoke-GitDeploy','New-GitRelease'
+          )
+          $exported = (Get-Command -Module Git-Sync).Name
+          $missing = $expected | Where-Object { $_ -notin $exported }
+          if ($missing) {
+            Write-Host "::error::Missing exports: $($missing -join ', ')"
+            exit 1
+          }
+          Write-Host "::notice::All $($expected.Count) expected functions exported ✅"
+
+  syntax:
+    name: PowerShell Parse Check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse all PowerShell files
+        shell: pwsh
+        run: |
+          $errors = @()
+          $files = Get-ChildItem -Path . -Recurse -Include *.ps1,*.psm1,*.psd1
+          foreach ($f in $files) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $f.FullName, [ref]$tokens, [ref]$parseErrors
+            ) | Out-Null
+            if ($parseErrors) {
+              foreach ($e in $parseErrors) {
+                Write-Host "::error file=$($f.FullName),line=$($e.Extent.StartLineNumber)::$($e.Message)"
+              }
+              $errors += $parseErrors
+            }
+          }
+          if ($errors.Count -gt 0) { exit 1 }
+          Write-Host "::notice::Parsed $($files.Count) PowerShell files without errors ✅"

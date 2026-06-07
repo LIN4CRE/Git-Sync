@@ -26,8 +26,24 @@ desktop.ini
 # Build output
 out/
 dist/
-coverage/
 
 # Pester test results
-# TestResults.xml (Removing from ignore to allow publishing results)
 testResults/
+
+# Coverage reports (auto-generated, should not be committed)
+TestResults.xml
+Coverage.xml
+coverage/
+
+# Dependencies (no package manager needed for PowerShell modules)
+.local/
+modules/
+
+# Environment / user-specific
+*.env.local
+*.env.user
+secrets/
+
+# Local test scripts and flags
+.sudo_as_admin_successful
+Test-Environment.ps1

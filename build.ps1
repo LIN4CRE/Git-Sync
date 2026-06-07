@@ -70,11 +70,19 @@ if (-not $SkipAnalyze) {
     $settingsPath = if (Test-Path $analyzerSettings) { $analyzerSettings } else { $null }
 
     $results = Invoke-ScriptAnalyzer -Path $repoRoot -Recurse -Settings $settingsPath -ErrorAction Stop
-    if ($results) {
-        $results | Format-Table -AutoSize
-        throw "PSScriptAnalyzer found issues. See above for details."
+
+    $ourResults = $results | Where-Object {
+        $_.ScriptPath -notmatch '\.local[\\/]'
+    }
+
+    if ($ourResults) {
+        $ourResults | Format-Table -AutoSize
+        throw "PSScriptAnalyzer found issues in project files. See above for details."
     } else {
-        Write-Host "PSScriptAnalyzer: Clean`n" -ForegroundColor Green
+        $total = @($results).Count
+        $kept = @($ourResults).Count
+        $skipped = $total - $kept
+        Write-Host "PSScriptAnalyzer: Clean (skipped $skipped module-internal warnings)" -ForegroundColor Green
     }
 }
 

@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-06-07
+
+### Added
+- `Get-GitHubAccountFromRepo` — extracts the GitHub account (owner) from a repo's remote URL, supporting both HTTPS and SSH formats.
+- `Switch-GhAccount` — switches the active `gh` CLI account with automatic detection, fallback modes, and `-WhatIf` support.
+- `Test-GitSyncEnvironment` — environment doctor that validates PowerShell version, execution policy, Git/gh CLI availability, and module integrity with structured result output.
+- `tests/Git-Sync.Helpers.Tests.ps1` — 12 unit tests covering account helpers and switcher.
+- `tests/Git-Sync.Failure.Tests.ps1` — 16 unit tests covering failure paths, edge cases, catch-block coverage, and rollback scenarios.
+- `tests/Git-Sync.Doctor.Tests.ps1` — 12 unit tests covering `Test-GitSyncEnvironment` output structure and behavior.
+- `.editorconfig` — cross-IDE formatting configuration for PowerShell, YAML, Markdown, and JSON files.
+- `.gitignore` now excludes `TestResults.xml`, `Coverage.xml`, `.local/`, `modules/`, and `secrets/`.
+- Split CI/CD workflows: `build.yml`, `test.yml`, `security.yml`, `release.yml` replacing single `ci.yml`.
+- `dependabot.yml` and `.github/ISSUE_TEMPLATE/config.yml` for automated dependency updates and issue management.
+- `PULL_REQUEST_TEMPLATE.md` with checklist and testing section.
+- `Install.bat`, `Git-Sync.bat`, `Git-Sync-Doctor.bat`, `Git-Sync-Elevated.bat` — Windows batch launchers for quick access.
+- `Test-Environment.ps1` — standalone prereq check for new users.
+- `TROUBLESHOOTING.md` — expanded troubleshooting guide.
+- `ARCHITECTURE.md`, `RELEASE.md`, `SUPPORT.md` — project documentation.
+
+### Changed
+- Module version bumped from `2.4.0` to `2.6.0` with 11 exported functions.
+- Total Pester tests expanded from 20 to 65 across 4 test files.
+- README now documents all 11 exported functions and split CI/CD workflow structure.
+
+### Fixed
+- Consolidated duplicate `repo/` and `Git-Sync/` directory enhancements into root directory.
+- Removed stale `TestResults.xml`, `Coverage.xml` from version control.
+- `.gitignore` now prevents future commits of test artifacts and dependency caches.
+
 ## [2.4.0] - 2026-06-06
 
 ### Added

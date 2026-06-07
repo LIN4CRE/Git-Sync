@@ -1,0 +1,148 @@
+name: Security
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Weekly Monday 04:17 UTC — keeps CodeQL fresh against newest rules.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1. CodeQL — static analysis. PowerShell isn't a first-class CodeQL target,
+  # but we still scan GitHub Actions YAML (`actions`) for supply-chain risks.
+  # -------------------------------------------------------------------------
+  codeql:
+    name: CodeQL (actions)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # -------------------------------------------------------------------------
+  # 2. Secret scanning with Gitleaks — fail the build if a token leaks.
+  # -------------------------------------------------------------------------
+  gitleaks:
+    name: Gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so leaks in older commits are caught
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE is optional; without it Gitleaks runs in OSS mode
+          # which is sufficient for a public repo.
+
+  # -------------------------------------------------------------------------
+  # 3. Dependency Review — only meaningful on PRs. Blocks PRs that add
+  # vulnerable or GPL-incompatible deps in actions/* references.
+  # -------------------------------------------------------------------------
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+          # Permitted licenses for any actions / NuGet packages introduced.
+          allow-licenses: >-
+            MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0,
+            CC0-1.0, Unlicense, 0BSD
+
+  # -------------------------------------------------------------------------
+  # 4. PowerShell-specific lint that doubles as a security check: forbid
+  # known-dangerous patterns (Invoke-Expression on user input, hardcoded
+  # tokens, plain-text passwords, ConvertTo-SecureString -AsPlainText).
+  # -------------------------------------------------------------------------
+  ps-security-lint:
+    name: PowerShell Security Lint
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Force -SkipPublisherCheck
+
+      - name: Run security-focused rules
+        shell: pwsh
+        run: |
+          $securityRules = @(
+            'PSAvoidUsingPlainTextForPassword',
+            'PSAvoidUsingConvertToSecureStringWithPlainText',
+            'PSAvoidUsingInvokeExpression',
+            'PSAvoidUsingUsernameAndPasswordParams',
+            'PSUsePSCredentialType',
+            'PSAvoidUsingComputerNameHardcoded'
+          )
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -IncludeRule $securityRules
+          if ($results) {
+            $results | Format-Table -AutoSize | Out-String | Write-Host
+            Write-Host "::error::Security-focused PSScriptAnalyzer rules found $($results.Count) issue(s)"
+            exit 1
+          }
+          Write-Host "::notice::Security lint: clean ✅"
+
+  # -------------------------------------------------------------------------
+  # 5. Heuristic secret regex sweep (catches things gitleaks rules may miss,
+  # e.g. lowercased PAT prefixes in comments).
+  # -------------------------------------------------------------------------
+  regex-secret-sweep:
+    name: Heuristic Secret Sweep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Grep for common secret patterns
+        run: |
+          set -euo pipefail
+          PATTERNS='(ghp_|gho_|ghs_|ghr_|github_pat_|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|xox[baprs]-[0-9a-zA-Z-]+|sk-[A-Za-z0-9]{20,})'
+          if git grep -nE "$PATTERNS" -- ':!*.md' ':!SECURITY.md' ':!AUDIT_REPORT.md'; then
+            echo "::error::Possible secret detected — review the matches above."
+            exit 1
+          fi
+          echo "::notice::Heuristic sweep clean ✅"

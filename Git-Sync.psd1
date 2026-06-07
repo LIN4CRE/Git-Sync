@@ -1,6 +1,6 @@
 @{
     RootModule = 'Git-Sync.psm1'
-    ModuleVersion = '2.4.0'
+    ModuleVersion = '2.6.0'
     GUID = '55c49c22-9867-4b9c-9516-e2f4ef0249c2'
     Author = 'LIN4CRE'
     CompanyName = 'LIN4CRE'
@@ -15,7 +15,10 @@
         'Test-GhAuthentication',
         'Get-LatestTag',
         'Invoke-GitDeploy',
-        'New-GitRelease'
+        'New-GitRelease',
+        'Get-GitHubAccountFromRepo',
+        'Switch-GhAccount',
+        'Test-GitSyncEnvironment'
     )
     CmdletsToExport = @()
     VariablesToExport = @()

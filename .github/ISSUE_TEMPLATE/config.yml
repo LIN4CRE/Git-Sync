@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/LIN4CRE/Git-Sync/discussions
+    about: Ask "how do I…?" questions, share ideas, or showcase how you use Git-Sync.
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/LIN4CRE/Git-Sync/security/advisories/new
+    about: Privately report a vulnerability via GitHub Security Advisories. Do NOT open a public issue.
+  - name: 📖 Documentation
+    url: https://github.com/LIN4CRE/Git-Sync#readme
+    about: Read the README, INSTALLATION guide, and ARCHITECTURE doc before opening an issue.

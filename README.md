@@ -11,14 +11,16 @@
 
 ## Features
 
-- ✅ **Smart Semantic Versioning** – Auto bump Patch / Minor / Major
-- ✅ **Multi-Account Support** – Works with multiple GitHub accounts (e.g., `LIN4CRE`, `DLinacre`, etc.)
+- ✅ **Smart Semantic Versioning** – Auto bump Patch / Minor / Major with prerelease support
+- ✅ **Multi-Account Support** – Automatically detect and switch between GitHub accounts per repo
 - ✅ **Hacker-Style UI** – Progress bars, status ticks, and clean output
 - ✅ **QoL Switches** – Continue on error, logging, pause between repos, and more
 - ✅ **One-Click Desktop Shortcut** – Run bulk sync with a single click
 - ✅ **Full Logging Mode** – Silent operation with detailed log files
 - ✅ **Dry Run Mode** – Preview what would happen without making changes
 - ✅ **Automatic Rollback Guidance** – Clear instructions if a release fails part-way
+- ✅ **Environment Doctor** – Diagnose and validate your system setup with `Test-GitSyncEnvironment`
+- ✅ **Account Switcher** – Seamlessly switch GitHub CLI accounts per repository with `Switch-GhAccount`
 
 ---
 
@@ -211,7 +213,7 @@ Import-Module Pester -Force
 Invoke-Pester -Path .\tests\Git-Sync.Tests.ps1
 ```
 
-A CI pipeline is included under `.github/workflows/ci.yml` to run `PSScriptAnalyzer` and `Pester` tests on every pull request.
+CI pipelines are included under `.github/workflows/` — with separate workflows for **build**, **test**, **security**, and **release** — to run `PSScriptAnalyzer`, `Pester` tests, and security scans on every push and pull request.
 
 ### PowerShell Module (Advanced)
 
@@ -221,6 +223,22 @@ The core functions are packaged as a proper PowerShell module (`Git-Sync.psd1` /
 Import-Module .\Git-Sync.psd1 -Force
 Get-Command -Module Git-Sync
 ```
+
+### Exported Functions (v2.6.0)
+
+| Function | Description |
+|---|---|
+| `Get-NextVersion` | Computes the next semantic version (Patch, Minor, Major) |
+| `Test-GitRepository` | Checks whether the current directory is a Git repository |
+| `Test-GitRemoteConnectivity` | Tests connectivity to a Git remote |
+| `Invoke-GitCommand` | Runs a git command and returns structured output |
+| `Test-GhAuthentication` | Verifies GitHub CLI authentication status |
+| `Get-LatestTag` | Retrieves the latest version tag from the repository |
+| `Invoke-GitDeploy` | Stages, commits, and pushes changes to a remote |
+| `New-GitRelease` | Creates a GitHub release with automatic or manual versioning |
+| `Get-GitHubAccountFromRepo` | Extracts the GitHub account name from a repo's remote URL |
+| `Switch-GhAccount` | Switches the active GitHub CLI account |
+| `Test-GitSyncEnvironment` | Runs system diagnostics to verify all prerequisites
 
 ---
 

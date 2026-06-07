@@ -1,0 +1,108 @@
+name: Test
+
+on:
+  push:
+    branches: [main, master, "release/**"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pester:
+    name: Pester (${{ matrix.os }} / pwsh ${{ matrix.shell }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            shell: pwsh
+          - os: windows-latest
+            shell: powershell  # Windows PowerShell 5.1
+          - os: ubuntu-latest
+            shell: pwsh
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester 5
+        shell: ${{ matrix.shell }}
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run Pester with coverage
+        shell: ${{ matrix.shell }}
+        run: |
+          Import-Module Pester -MinimumVersion 5.5.0
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'tests'
+          $config.Run.Exit = $true
+          $config.Run.Throw = $true
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = 'NUnitXml'
+          $config.TestResult.OutputPath = 'TestResults.xml'
+          $config.CodeCoverage.Enabled = $true
+          $config.CodeCoverage.Path = './Git-Sync.psm1'
+          $config.CodeCoverage.OutputFormat = 'JaCoCo'
+          $config.CodeCoverage.OutputPath = 'Coverage.xml'
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+      - name: Enforce coverage threshold (module ≥ 80%)
+        if: matrix.os == 'windows-latest' && matrix.shell == 'pwsh'
+        shell: pwsh
+        run: |
+          [xml]$cov = Get-Content Coverage.xml
+          # JaCoCo: pick the top-level LINE counter on the root <report>
+          $line = $cov.report.counter | Where-Object { $_.type -eq 'LINE' } | Select-Object -First 1
+          if (-not $line) {
+            Write-Host "::error::Could not parse coverage report"
+            exit 1
+          }
+          $covered = [int]$line.covered
+          $missed  = [int]$line.missed
+          $total   = $covered + $missed
+          $pct     = if ($total -gt 0) { [math]::Round(($covered / $total) * 100, 2) } else { 0 }
+          Write-Host "Line coverage: $pct% ($covered / $total)"
+          if ($pct -lt 80) {
+            Write-Host "::error::Coverage $pct% is below the 80% module threshold"
+            exit 1
+          }
+          Write-Host "::notice::Coverage ${pct}% meets the 80% threshold ✅"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.shell }}
+          path: |
+            TestResults.xml
+            Coverage.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish test summary
+        if: always() && matrix.os == 'windows-latest' && matrix.shell == 'pwsh'
+        shell: pwsh
+        run: |
+          if (Test-Path TestResults.xml) {
+            [xml]$r = Get-Content TestResults.xml
+            $total = [int]$r.'test-results'.total
+            $failures = [int]$r.'test-results'.failures
+            $errors = [int]$r.'test-results'.errors
+            $skipped = [int]$r.'test-results'.skipped
+            "## 🧪 Pester Results" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "| Total | Passed | Failed | Errors | Skipped |" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "|------:|-------:|-------:|-------:|--------:|" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            "| $total | $($total - $failures - $errors - $skipped) | $failures | $errors | $skipped |" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
