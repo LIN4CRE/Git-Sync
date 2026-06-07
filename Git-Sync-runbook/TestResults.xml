@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="65" errors="0" failures="0" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2026-06-07" time="12:29:40">
+  <environment os-version="6.1.158+" nunit-version="2.5.8.0" cwd="/home/user/repo" user-domain="" clr-version="8.0.10" machine-name="e2b.local" platform="Linux" user="user" />
+  <culture-info current-culture="" current-uiculture="" />
+  <test-suite type="TestFixture" name="Pester" executed="True" result="Success" success="True" time="2.8658" asserts="0" description="Pester">
+    <results>
+      <test-suite type="TestFixture" name="/home/user/repo/tests/Git-Sync.Doctor.Tests.ps1" executed="True" result="Success" success="True" time="1.4244" asserts="0" description="/home/user/repo/tests/Git-Sync.Doctor.Tests.ps1">
+        <results>
+          <test-suite type="TestFixture" name="Test-GitSyncEnvironment" executed="True" result="Success" success="True" time="0.9798" asserts="0" description="Test-GitSyncEnvironment">
+            <results>
+              <test-case description="Returns a result object with Ok / Failures / Warnings / Checks" name="Test-GitSyncEnvironment.Returns a result object with Ok / Failures / Warnings / Checks" time="0.2962" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Includes a PowerShell version check that passes on PS 5.1+" name="Test-GitSyncEnvironment.Includes a PowerShell version check that passes on PS 5.1+" time="0.0414" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Includes an execution policy check" name="Test-GitSyncEnvironment.Includes an execution policy check" time="0.0263" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Includes a git CLI check" name="Test-GitSyncEnvironment.Includes a git CLI check" time="0.0259" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Includes a gh CLI check (always present, may warn)" name="Test-GitSyncEnvironment.Includes a gh CLI check (always present, may warn)" time="0.0256" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Includes a Git-Sync module check" name="Test-GitSyncEnvironment.Includes a Git-Sync module check" time="0.0631" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Reports Ok=$true when every check passes" name="Test-GitSyncEnvironment.Reports Ok=$true when every check passes" time="0.0629" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Honors -Quiet (does not write to host)" name="Test-GitSyncEnvironment.Honors -Quiet (does not write to host)" time="0.0412" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Each check has Name, Status, Detail, and Fix properties" name="Test-GitSyncEnvironment.Each check has Name, Status, Detail, and Fix properties" time="0.0563" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Produces banner output when -Quiet is not specified" name="Test-GitSyncEnvironment.Produces banner output when -Quiet is not specified" time="0.2174" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Reports HEALTHY result line when there are no failures" name="Test-GitSyncEnvironment.Reports HEALTHY result line when there are no failures" time="0.0437" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Accepts a -RepoPath parameter and uses it for module lookup" name="Test-GitSyncEnvironment.Accepts a -RepoPath parameter and uses it for module lookup" time="0.0374" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="/home/user/repo/tests/Git-Sync.Failure.Tests.ps1" executed="True" result="Success" success="True" time="0.4925" asserts="0" description="/home/user/repo/tests/Git-Sync.Failure.Tests.ps1">
+        <results>
+          <test-suite type="TestFixture" name="Invoke-GitDeploy failure paths" executed="True" result="Success" success="True" time="0.0858" asserts="0" description="Invoke-GitDeploy failure paths">
+            <results>
+              <test-case description="Throws when git push fails" name="Invoke-GitDeploy failure paths.Throws when git push fails" time="0.0477" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Throws when staging fails" name="Invoke-GitDeploy failure paths.Throws when staging fails" time="0.0113" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Throws &quot;Not in a Git repository&quot; when rev-parse fails" name="Invoke-GitDeploy failure paths.Throws &quot;Not in a Git repository&quot; when rev-parse fails" time="0.0099" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Emits a warning when remote connectivity check fails but continues" name="Invoke-GitDeploy failure paths.Emits a warning when remote connectivity check fails but continues" time="0.0124" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="New-GitRelease failure paths" executed="True" result="Success" success="True" time="0.1825" asserts="0" description="New-GitRelease failure paths">
+            <results>
+              <test-case description="Refuses to overwrite an existing tag without -Force" name="New-GitRelease failure paths.Refuses to overwrite an existing tag without -Force" time="0.0508" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Throws when the underlying deploy fails (rollback path)" name="New-GitRelease failure paths.Throws when the underlying deploy fails (rollback path)" time="0.0137" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Computes the next version in AutoBump mode" name="New-GitRelease failure paths.Computes the next version in AutoBump mode" time="0.0278" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Get-NextVersion edge cases" executed="True" result="Success" success="True" time="0.2029" asserts="0" description="Get-NextVersion edge cases">
+            <results>
+              <test-case description="Strips uppercase V prefix" name="Get-NextVersion edge cases.Strips uppercase V prefix" time="0.0054" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Resets patch when minor is bumped" name="Get-NextVersion edge cases.Resets patch when minor is bumped" time="0.0055" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Resets minor and patch when major is bumped" name="Get-NextVersion edge cases.Resets minor and patch when major is bumped" time="0.0055" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Invoke-GitCommand contract" executed="True" result="Success" success="True" time="0.2802" asserts="0" description="Invoke-GitCommand contract">
+            <results>
+              <test-case description="Returns a hashtable containing ExitCode, Success, and Output" name="Invoke-GitCommand contract.Returns a hashtable containing ExitCode, Success, and Output" time="0.0485" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="IgnoreError returns Success=$false instead of throwing" name="Invoke-GitCommand contract.IgnoreError returns Success=$false instead of throwing" time="0.0246" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Catch-block coverage on probe functions" executed="True" result="Success" success="True" time="0.3592" asserts="0" description="Catch-block coverage on probe functions">
+            <results>
+              <test-case description="Test-GitRepository returns $false when git itself throws" name="Catch-block coverage on probe functions.Test-GitRepository returns $false when git itself throws" time="0.0147" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Test-GitRemoteConnectivity returns $false when git throws" name="Catch-block coverage on probe functions.Test-GitRemoteConnectivity returns $false when git throws" time="0.0156" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Test-GhAuthentication returns $false when gh throws" name="Catch-block coverage on probe functions.Test-GhAuthentication returns $false when gh throws" time="0.0189" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Get-LatestTag returns 0.0.0 when git throws" name="Catch-block coverage on probe functions.Get-LatestTag returns 0.0.0 when git throws" time="0.0186" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Invoke-GitCommand returns Success=$false with IgnoreError when git throws" name="Catch-block coverage on probe functions.Invoke-GitCommand returns Success=$false with IgnoreError when git throws" time="0.0068" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Invoke-GitDeploy success-with-commit branch" executed="True" result="Success" success="True" time="0.3712" asserts="0" description="Invoke-GitDeploy success-with-commit branch">
+            <results>
+              <test-case description="Creates a commit when staged changes exist" name="Invoke-GitDeploy success-with-commit branch.Creates a commit when staged changes exist" time="0.0083" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="New-GitRelease rollback guidance branch" executed="True" result="Success" success="True" time="0.3878" asserts="0" description="New-GitRelease rollback guidance branch">
+            <results>
+              <test-case description="Prints rollback hints and throws when an inner operation fails" name="New-GitRelease rollback guidance branch.Prints rollback hints and throws when an inner operation fails" time="0.013" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Switch-GhAccount fallback branch" executed="True" result="Success" success="True" time="0.4265" asserts="0" description="Switch-GhAccount fallback branch">
+            <results>
+              <test-case description="Falls back to legacy gh auth switch when --user fails" name="Switch-GhAccount fallback branch.Falls back to legacy gh auth switch when --user fails" time="0.024" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns $false when gh itself throws inside the try block" name="Switch-GhAccount fallback branch.Returns $false when gh itself throws inside the try block" time="0.0107" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="/home/user/repo/tests/Git-Sync.Helpers.Tests.ps1" executed="True" result="Success" success="True" time="0.3491" asserts="0" description="/home/user/repo/tests/Git-Sync.Helpers.Tests.ps1">
+        <results>
+          <test-suite type="TestFixture" name="Get-GitHubAccountFromRepo" executed="True" result="Success" success="True" time="0.1928" asserts="0" description="Get-GitHubAccountFromRepo">
+            <results>
+              <test-case description="Returns $null when the path does not exist" name="Get-GitHubAccountFromRepo.Returns $null when the path does not exist" time="0.0312" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns $null when git remote get-url fails" name="Get-GitHubAccountFromRepo.Returns $null when git remote get-url fails" time="0.018" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Parses an HTTPS GitHub remote URL" name="Get-GitHubAccountFromRepo.Parses an HTTPS GitHub remote URL" time="0.0938" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Parses an SSH GitHub remote URL" name="Get-GitHubAccountFromRepo.Parses an SSH GitHub remote URL" time="0.0165" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Allows usernames with hyphens (regression test for v2.3.0)" name="Get-GitHubAccountFromRepo.Allows usernames with hyphens (regression test for v2.3.0)" time="0.0131" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns $null for a non-GitHub remote" name="Get-GitHubAccountFromRepo.Returns $null for a non-GitHub remote" time="0.0075" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Switch-GhAccount" executed="True" result="Success" success="True" time="0.2899" asserts="0" description="Switch-GhAccount">
+            <results>
+              <test-case description="Returns $false and warns on empty target account" name="Switch-GhAccount.Returns $false and warns on empty target account" time="0.0285" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns $false and warns on whitespace target account" name="Switch-GhAccount.Returns $false and warns on whitespace target account" time="0.0048" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns $false when gh CLI is not installed" name="Switch-GhAccount.Returns $false when gh CLI is not installed" time="0.0142" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns $true and is a no-op when already on the target account" name="Switch-GhAccount.Returns $true and is a no-op when already on the target account" time="0.0112" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns $true after a successful switch" name="Switch-GhAccount.Returns $true after a successful switch" time="0.0183" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Honors -WhatIf and does not invoke gh auth switch" name="Switch-GhAccount.Honors -WhatIf and does not invoke gh auth switch" time="0.0156" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="/home/user/repo/tests/Git-Sync.Tests.ps1" executed="True" result="Success" success="True" time="0.5998" asserts="0" description="/home/user/repo/tests/Git-Sync.Tests.ps1">
+        <results>
+          <test-suite type="TestFixture" name="Get-NextVersion" executed="True" result="Success" success="True" time="0.1559" asserts="0" description="Get-NextVersion">
+            <results>
+              <test-case description="Increments patch by default" name="Get-NextVersion.Increments patch by default" time="0.0214" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Increments minor" name="Get-NextVersion.Increments minor" time="0.0049" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Increments major" name="Get-NextVersion.Increments major" time="0.021" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Handles v-prefixed versions" name="Get-NextVersion.Handles v-prefixed versions" time="0.0251" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Defaults to 0.0.0 when given malformed input and warns" name="Get-NextVersion.Defaults to 0.0.0 when given malformed input and warns" time="0.0462" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Adds prerelease suffix when requested" name="Get-NextVersion.Adds prerelease suffix when requested" time="0.0196" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Test-GitRepository" executed="True" result="Success" success="True" time="0.2067" asserts="0" description="Test-GitRepository">
+            <results>
+              <test-case description="Returns true when git says we are inside a work tree" name="Test-GitRepository.Returns true when git says we are inside a work tree" time="0.0104" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns false when git exits non-zero" name="Test-GitRepository.Returns false when git exits non-zero" time="0.0199" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Test-GitRemoteConnectivity" executed="True" result="Success" success="True" time="0.2477" asserts="0" description="Test-GitRemoteConnectivity">
+            <results>
+              <test-case description="Returns true on successful ls-remote" name="Test-GitRemoteConnectivity.Returns true on successful ls-remote" time="0.0093" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns false on failed ls-remote" name="Test-GitRemoteConnectivity.Returns false on failed ls-remote" time="0.0138" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Invoke-GitCommand" executed="True" result="Success" success="True" time="0.3138" asserts="0" description="Invoke-GitCommand">
+            <results>
+              <test-case description="Returns a success hashtable on exit code 0" name="Invoke-GitCommand.Returns a success hashtable on exit code 0" time="0.0072" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Throws on non-zero exit code by default" name="Invoke-GitCommand.Throws on non-zero exit code by default" time="0.0324" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Does not throw when IgnoreError is set" name="Invoke-GitCommand.Does not throw when IgnoreError is set" time="0.0223" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Get-LatestTag" executed="True" result="Success" success="True" time="0.3633" asserts="0" description="Get-LatestTag">
+            <results>
+              <test-case description="Returns the latest tag stripped of v-prefix" name="Get-LatestTag.Returns the latest tag stripped of v-prefix" time="0.0222" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns 0.0.0 when no tags exist" name="Get-LatestTag.Returns 0.0.0 when no tags exist" time="0.0226" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Test-GhAuthentication" executed="True" result="Success" success="True" time="0.3985" asserts="0" description="Test-GhAuthentication">
+            <results>
+              <test-case description="Returns false when gh is not installed" name="Test-GhAuthentication.Returns false when gh is not installed" time="0.0217" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Returns true when gh auth status succeeds" name="Test-GhAuthentication.Returns true when gh auth status succeeds" time="0.0061" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="Invoke-GitDeploy" executed="True" result="Success" success="True" time="0.4244" asserts="0" description="Invoke-GitDeploy">
+            <results>
+              <test-case description="Should not throw in a mocked repo with no changes" name="Invoke-GitDeploy.Should not throw in a mocked repo with no changes" time="0.0222" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+          <test-suite type="TestFixture" name="New-GitRelease" executed="True" result="Success" success="True" time="0.4788" asserts="0" description="New-GitRelease">
+            <results>
+              <test-case description="Should bump version when using AutoBump parameter set" name="New-GitRelease.Should bump version when using AutoBump parameter set" time="0.027" asserts="0" success="True" result="Success" executed="True" />
+              <test-case description="Should use explicit version when using Manual parameter set" name="New-GitRelease.Should use explicit version when using Manual parameter set" time="0.0235" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+        </results>
+      </test-suite>
+    </results>
+  </test-suite>
+</test-results>
