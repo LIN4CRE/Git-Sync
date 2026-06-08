@@ -93,19 +93,22 @@ if (-not $SkipTest) {
     Write-Host "=== Running Pester Tests ===" -ForegroundColor Cyan
     Import-Module Pester -MinimumVersion 5.0 -ErrorAction Stop
 
+    $testOutDir = Join-Path $repoRoot 'TestResults'
+    if (-not (Test-Path $testOutDir)) { New-Item -ItemType Directory -Path $testOutDir -Force | Out-Null }
+
     $config = New-PesterConfiguration
     $config.Run.Path = "$repoRoot/tests"
     $config.TestResult.Enabled = $true
-    $config.TestResult.OutputPath = "$repoRoot/TestResults.xml"
+    $config.TestResult.OutputPath = "$testOutDir/TestResults.xml"
     $config.Output.Verbosity = 'Detailed'
     $config.CodeCoverage.Enabled = $true
     $config.CodeCoverage.Path = "$repoRoot/Git-Sync.psm1"
-    $config.CodeCoverage.OutputPath = "$repoRoot/Coverage.xml"
+    $config.CodeCoverage.OutputPath = "$testOutDir/Coverage.xml"
+    $config.CodeCoverage.CoveragePercentTarget = 80
 
     Invoke-Pester -Configuration $config
 
-    Write-Host "`nTest results written to: $repoRoot/TestResults.xml" -ForegroundColor Green
-    Write-Host "Coverage report written to: $repoRoot/Coverage.xml" -ForegroundColor Green
+    Write-Host "`nTest results written to: $testOutDir" -ForegroundColor Green
 }
 
 Write-Host "`nBuild complete." -ForegroundColor Green

@@ -11,17 +11,17 @@
     - Bulk operations support
 
 .VERSION
-    2.4.0 - 2026-06-06
-    - Packaged as a proper PowerShell module (Git-Sync.psm1 / Git-Sync.psd1)
-    - Fixed New-GitRelease parameter binding (AutoBump vs Manual parameter sets)
-    - Fixed Get-LatestTag to strip leading 'v' or 'V' prefix
-    - Fixed Get-NextVersion to tolerate malformed tags gracefully
-    - Fixed double error/warning reporting in helper functions
-    - Fixed Invoke-GitDeploy staging check for clarity
-    - Fixed New-GitRelease to check gh exit code and handle Force correctly
-    - Added Force support to Invoke-GitDeploy (uses --force-with-lease)
-    - Added Force support to New-GitRelease (tag overwrite and force push)
-    - Removed script-end Write-Host to avoid pollution when dot-sourced
+    2.6.0 - 2026-06-07
+    - 11 exported functions: Get-NextVersion, Get-LatestTag, New-GitRelease, Invoke-GitDeploy,
+      Get-GitHubAccountFromRepo, Switch-GhAccount, Test-GitSyncEnvironment, Get-GitHubRepo,
+      Get-GitHubAccountFromRepo, Sync-GitRepository, Invoke-GitHubRelease
+    - Multi-account GitHub support with automatic gh CLI account switching
+    - Environment doctor (Test-GitSyncEnvironment) validates PowerShell, Git, gh, and module state
+    - Smart git status checking before deploy/release operations
+    - CmdletBinding and SupportsShouldProcess on all public functions
+    - Comprehensive error handling with structured warnings and catch-block coverage
+    - Bulk sync orchestrator, account extraction from remote URLs (HTTPS + SSH)
+    - 67 Pester tests across 4 test files, 80%+ code coverage, enforced in CI
 #>
 
 $ErrorActionPreference = 'Stop'

@@ -137,51 +137,6 @@ function Show-RepoStatus {
     if ($Message) { Write-Hacker " → $Message" "DarkGray" } else { Write-Host "" }
 }
 
-# ==================== GH ACCOUNT HANDLING ====================
-function Get-GitHubAccountFromRepo {
-    param([string]$RepoPath)
-    Push-Location $RepoPath
-    try {
-        $remote = git remote get-url origin 2>$null
-        if ($remote -match 'github\.com[:/]([\w-]+)/') { return $matches[1] }
-    } finally { Pop-Location }
-    return $null
-}
-
-function Switch-GhAccount {
-    param([string]$TargetAccount)
-    if (-not $AutoSwitchGh) { return $true }
-
-    if ([string]::IsNullOrWhiteSpace($TargetAccount)) {
-        Write-Hacker " [WARN] Cannot switch gh account: target account is empty" "Yellow"
-        return $false
-    }
-
-    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-        Write-Hacker " [WARN] gh CLI not found, skipping account switch" "Yellow"
-        return $false
-    }
-
-    try {
-        $current = gh auth status 2>&1 | Select-String "Logged in to github.com as"
-        if ($current -match "as (\S+)") {
-            if ($matches[1] -eq $TargetAccount) { return $true }
-        }
-        Write-Hacker " Switching gh account → $TargetAccount" "Yellow"
-
-        # Use gh auth switch with --user flag (gh CLI profile management)
-        gh auth switch --user $TargetAccount 2>$null | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            # Fallback: try without --user flag for older gh versions
-            gh auth switch $TargetAccount 2>$null | Out-Null
-        }
-        return ($LASTEXITCODE -eq 0)
-    } catch {
-        Write-Hacker " [WARN] Failed to switch gh account: $_" "Yellow"
-        return $false
-    }
-}
-
 # ==================== MAIN HACKER UI ====================
 if ($Host.UI.SupportsVirtualTerminal -and -not $NoColor) { Clear-Host }
 

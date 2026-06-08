@@ -31,8 +31,7 @@ dist/
 testResults/
 
 # Coverage reports (auto-generated, should not be committed)
-TestResults.xml
-Coverage.xml
+TestResults/
 coverage/
 
 # Dependencies (no package manager needed for PowerShell modules)

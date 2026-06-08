@@ -58,8 +58,7 @@ jobs:
           Invoke-Pester -Configuration $config
 
       - name: Enforce coverage threshold (module ≥ 80%)
-        if: matrix.os == 'windows-latest' && matrix.shell == 'pwsh'
-        shell: pwsh
+        shell: ${{ matrix.shell }}
         run: |
           [xml]$cov = Get-Content Coverage.xml
           # JaCoCo: pick the top-level LINE counter on the root <report>

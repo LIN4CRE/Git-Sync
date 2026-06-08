@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Module version bumped from `2.4.0` to `2.6.0` with 11 exported functions.
-- Total Pester tests expanded from 20 to 65 across 4 test files.
+- Total Pester tests expanded from 20 to 67 across 4 test files.
 - README now documents all 11 exported functions and split CI/CD workflow structure.
 
 ### Fixed

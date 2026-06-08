@@ -178,7 +178,7 @@ flowchart LR
     u --> i(Install-Module<br/>Pester ≥5, PSScriptAnalyzer)
     i --> l(Invoke-ScriptAnalyzer<br/>-Settings PSScriptAnalyzerSettings.psd1)
     l --> t(Invoke-Pester<br/>CodeCoverage on Git-Sync.psm1)
-    t --> out{{Outputs:<br/>TestResults.xml<br/>Coverage.xml}}
+    t --> out{{Outputs:<br/>TestResults/TestResults.xml<br/>TestResults/Coverage.xml}}
 
     push[git push] --> gha(GitHub Actions)
     gha --> j1(build.yml<br/>module manifest check)
@@ -192,7 +192,7 @@ flowchart LR
 1. **Unblock** all `.ps1`/`.psm1`/`.psd1`/`.ps1xml` files (prevents `PSSecurityException` on Windows).
 2. **Install dependencies** (`Pester ≥ 5.0`, `PSScriptAnalyzer`).
 3. **Lint** with `Invoke-ScriptAnalyzer` using repo-local `PSScriptAnalyzerSettings.psd1`.
-4. **Test** with `Invoke-Pester`, emitting NUnit `TestResults.xml` and JaCoCo `Coverage.xml`.
+4. **Test** with `Invoke-Pester`, emitting NUnit `TestResults/TestResults.xml` and JaCoCo `TestResults/Coverage.xml`.
 5. Skippable phases: `-SkipAnalyze`, `-SkipTest`, `-SkipBlockCheck`.
 
 ### CI/CD (GitHub Actions)
