@@ -1,27 +1,61 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Hacker-style Multi-Account Git Sync Tool v2.3
-    Features: Progress bars, account switching, QoL switches, visual status
+    Git-Sync Hacker UI v2.7 — Multi-Account Bulk Git Sync Tool
 
 .DESCRIPTION
     Syncs multiple Git repositories across different GitHub accounts with
-    smart versioning, bulk operations, and a beautiful terminal UI.
+    smart semantic versioning, bulk operations, and a polished hacker-style
+    terminal UI. Features progress bars, account auto-switching, QoL flags,
+    logging, and a rich summary report.
+
+.PARAMETER BaseFolders
+    Array of root folders to scan for Git repositories.
+
+.PARAMETER Action
+    What to perform: Deploy (commit+push), Release (tag+publish), Both.
+
+.PARAMETER BumpVersion
+    Required when Action is Release or Both. One of: Patch, Minor, Major.
+
+.PARAMETER WhatIf
+    Dry-run: discover repos and show what would happen without making changes.
+
+.PARAMETER Force
+    Force-push and overwrite existing tags.
+
+.PARAMETER AutoSwitchGh
+    Automatically switch the gh CLI account per repository.
+
+.PARAMETER ContinueOnError
+    Keep processing remaining repos even when one fails.
+
+.PARAMETER ShowGitStatus
+    Display a short git status summary after each repo.
+
+.PARAMETER PauseBetweenRepos
+    Pause for confirmation after each repository.
+
+.PARAMETER OnlyShowFailures
+    Suppress per-repo output; only display failures in the summary.
+
+.PARAMETER NoColor
+    Disable ANSI color output (useful for piping or logging).
+
+.PARAMETER Confirm
+    Prompt for confirmation before processing begins.
+
+.PARAMETER LogFile
+    Path for a detailed log file. Enables silent console mode when set.
+
+.EXAMPLE
+    .\Sync-AllRepos-Hacker.ps1 -Action Both -BumpVersion Patch -AutoSwitchGh
+
+.EXAMPLE
+    .\Sync-AllRepos-Hacker.ps1 -Action Deploy -ContinueOnError -LogFile sync.log
 
 .VERSION
-    2.3.0 - 2026-06-06
-    - Fixed New-GitRelease parameter binding (ParameterSet AutoBump vs Manual)
-    - Fixed Get-LatestTag to strip 'v' prefix
-    - Fixed repo discovery to use immediate children (removed -Recurse)
-    - Fixed GitHub username regex to allow hyphens
-    - Fixed LogFile relative path resolution and directory creation
-    - Fixed double error/warning messages in helper functions
-    - Fixed Force implementation for git push --force-with-lease and tag overwrite
-    - Added Set-StrictMode
-    - Added empty account handling in Switch-GhAccount
-    - Moved dependency loading outside the per-repo loop
-    - Added validation for -BumpVersion when Action is Release or Both
-    - Fixed success/skip counting to avoid misleading totals
+    2.7.0 - 2026-06-09
 #>
 
 param(
@@ -38,24 +72,24 @@ param(
     [switch]$AutoSwitchGh,
 
     # === QoL Switches ===
-    [switch]$ContinueOnError,  # Keep going even if one repo fails
-    [switch]$ShowGitStatus,    # Show git status summary per repo
-    [switch]$PauseBetweenRepos,# Pause after each repo (good for review)
-    [switch]$OnlyShowFailures, # Only display failed repos at the end
-    [switch]$NoColor,          # Disable colors (for logging)
-    [switch]$Confirm,          # Ask before starting
-    [string]$LogFile            # Path to write full log (silent mode when used)
+    [switch]$ContinueOnError,
+    [switch]$ShowGitStatus,
+    [switch]$PauseBetweenRepos,
+    [switch]$OnlyShowFailures,
+    [switch]$NoColor,
+    [switch]$Confirm,
+    [string]$LogFile
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'
 
-# Validate required parameters
+# ── Validate required parameters ──────────────────────────────────────────────
 if ($Action -in @('Release','Both') -and -not $BumpVersion) {
     throw "Parameter -BumpVersion is required when Action is '$Action'."
 }
 
-# Resolve LogFile to absolute path early so it doesn't change per-repo
+# ── Resolve LogFile to an absolute path early ─────────────────────────────────
 if ($LogFile) {
     if (-not [System.IO.Path]::IsPathRooted($LogFile)) {
         $LogFile = Join-Path $PSScriptRoot $LogFile
@@ -66,174 +100,205 @@ if ($LogFile) {
     }
 }
 
-# ==================== HACKER STYLE UI ====================
+# ══════════════════════════════════════════════════════════════════════════════
+#  HACKER STYLE UI HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
 $esc = [char]27
 
 function Write-Hacker {
     param([string]$Text, [string]$Color = 'Green', [switch]$NoNewline)
 
     if ($LogFile) {
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        Add-Content -Path $LogFile -Value "[$timestamp] $Text" -ErrorAction SilentlyContinue
+        $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Add-Content -Path $LogFile -Value "[$ts] $Text" -ErrorAction SilentlyContinue
     }
 
-    if ($NoColor) { Write-Host $Text -NoNewline:$NoNewline; return }
+    if ($NoColor) {
+        Write-Host $Text -NoNewline:$NoNewline
+        return
+    }
 
-    $colorCode = switch ($Color) {
+    $code = switch ($Color) {
         'Green'    { '32' }
         'Red'      { '31' }
         'Yellow'   { '33' }
         'Cyan'     { '36' }
         'Magenta'  { '35' }
-        'White'    { '37' }
+        'White'    { '97' }
         'DarkGray' { '90' }
+        'Blue'     { '34' }
         default    { '32' }
     }
-    Write-Host "$esc[${colorCode}m$Text$esc[0m" -NoNewline:$NoNewline
+    Write-Host "$esc[${code}m$Text$esc[0m" -NoNewline:$NoNewline
 }
 
 function Show-ProgressBar {
     param([int]$Current, [int]$Total, [string]$Label = "Progress")
-    $percent = [math]::Round(($Current / $Total) * 100)
-    $barLength = 35
-    $filled = [math]::Floor($percent / 100 * $barLength)
-    $bar = ('█' * $filled) + ('░' * ($barLength - $filled))
-
+    if ($Total -le 0) { return }
+    $pct      = [math]::Round(($Current / $Total) * 100)
+    $barLen   = 40
+    $filled   = [math]::Floor($pct / 100 * $barLen)
+    $empty    = $barLen - $filled
+    $bar      = ('█' * $filled) + ('░' * $empty)
+    $line     = "`r  $Label  [$bar] $pct%%  ($Current / $Total)"
     if ($NoColor) {
-        Write-Host "`r$Label [$bar] $percent% ($Current/$Total)" -NoNewline
+        Write-Host $line -NoNewline
     } else {
-        Write-Host "`r$Label [$bar] $percent% ($Current/$Total)" -NoNewline -ForegroundColor Cyan
+        Write-Host "$esc[36m$line$esc[0m" -NoNewline
     }
     if ($Current -eq $Total) { Write-Host "" }
 }
 
 function Show-Switch {
-    param([string]$Name, [bool]$Enabled, [string]$Description = "")
-    $status = if ($Enabled) { "ON " } else { "OFF" }
+    param([string]$Name, [bool]$Enabled, [string]$Desc = "")
+    $tag   = if ($Enabled) { "  ON " } else { " OFF " }
     $color = if ($Enabled) { "Green" } else { "DarkGray" }
-    Write-Hacker " [ $status ] $Name" $color
-    if ($Description) { Write-Hacker "  $Description" "DarkGray" }
+    Write-Hacker "  [$tag] " $color -NoNewline
+    Write-Hacker $Name "White" -NoNewline
+    if ($Desc) { Write-Hacker "  — $Desc" "DarkGray" } else { Write-Host "" }
 }
 
 function Show-RepoStatus {
     param([string]$RepoName, [string]$Account, [string]$Status, [string]$Message = "")
-
-    $icon = switch ($Status) {
+    $icon  = switch ($Status) {
         "Success" { "✓" }
         "Failed"  { "✗" }
         "Skipped" { "○" }
         default   { "•" }
     }
     $color = switch ($Status) {
-        "Success" { "Green" }
-        "Failed"  { "Red" }
+        "Success" { "Green"  }
+        "Failed"  { "Red"    }
         "Skipped" { "Yellow" }
-        default   { "White" }
+        default   { "White"  }
     }
-
-    Write-Hacker " $icon " $color -NoNewline
-    Write-Hacker "$RepoName" "White" -NoNewline
-    Write-Hacker " [$Account]" "DarkGray" -NoNewline
-    if ($Message) { Write-Hacker " → $Message" "DarkGray" } else { Write-Host "" }
+    Write-Hacker "  $icon " $color -NoNewline
+    Write-Hacker $RepoName "White" -NoNewline
+    Write-Hacker "  @$Account" "DarkGray" -NoNewline
+    if ($Message) { Write-Hacker "  → $Message" "DarkGray" } else { Write-Host "" }
 }
 
-# ==================== MAIN HACKER UI ====================
+function Show-Divider {
+    param([string]$Color = "DarkGray")
+    Write-Hacker ("─" * 62) $Color
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  BANNER
+# ══════════════════════════════════════════════════════════════════════════════
+
 if ($Host.UI.SupportsVirtualTerminal -and -not $NoColor) { Clear-Host }
 
-Write-Hacker @"
-╔══════════════════════════════════════════════════════════╗
-║  ██████╗ ██╗███████╗ ██████╗  ██████╗ ██████╗ ███████╗   ║
-║ ██╔════╝ ██║╚══███╔╝██╔═══██╗██╔═══██╗██╔══██╗██╔════╝   ║
-║ ██║  ███╗██║  ███╔╝ ██║   ██║██║   ██║██████╔╝█████╗     ║
-║ ██║   ██║██║ ███╔╝  ██║   ██║██║   ██║██╔══██╗██╔══╝     ║
-║ ╚██████╔╝██║███████╗╚██████╔╝╚██████╔╝██║  ██║███████╗   ║
-║  ╚═════╝ ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝   ║
-║                                                          ║
-║           ██████╗ ███████╗████████╗███████╗               ║
-║          ██╔═══██╗██╔════╝╚══██╔══╝██╔════╝               ║
-║          ██║   ██║███████╗   ██║   █████╗                 ║
-║          ██║   ██║╚════██║   ██║   ██╔══╝                 ║
-║          ╚██████╔╝███████║   ██║   ███████╗               ║
-║           ╚═════╝ ╚══════╝   ╚═╝   ╚══════╝               ║
-╚══════════════════════════════════════════════════════════╝
-"@ "Green"
+$banner = @"
+  ╔══════════════════════════════════════════════════════════╗
+  ║  ██████╗ ██╗████████╗      ███████╗██╗   ██╗███╗   ██╗  ║
+  ║ ██╔════╝ ██║╚══██╔══╝      ██╔════╝╚██╗ ██╔╝████╗  ██║  ║
+  ║ ██║  ███╗██║   ██║   █████╗███████╗ ╚████╔╝ ██╔██╗ ██║  ║
+  ║ ██║   ██║██║   ██║   ╚════╝╚════██║  ╚██╔╝  ██║╚██╗██║  ║
+  ║ ╚██████╔╝██║   ██║         ███████║   ██║   ██║ ╚████║  ║
+  ║  ╚═════╝ ╚═╝   ╚═╝         ╚══════╝   ╚═╝   ╚═╝  ╚═══╝  ║
+  ║                                                          ║
+  ║          Multi-Account Bulk Git Sync  v2.7.0             ║
+  ╚══════════════════════════════════════════════════════════╝
+"@
 
-Write-Hacker "`n[ GIT-SYNC v2.3 ]" "Cyan"
-Write-Hacker "Accounts : $($BaseFolders -join ' | ')" "DarkGray"
-Write-Hacker "Action   : $Action" "DarkGray"
-Write-Hacker "──────────────────────────────────────────────────────`n" "DarkGray"
+Write-Hacker $banner "Green"
 
-# Show active QoL switches
-Write-Hacker "[ QoL SWITCHES ]" "Magenta"
-Show-Switch "AutoSwitchGh" $AutoSwitchGh "Automatically switch gh accounts per repo"
-Show-Switch "ContinueOnError" $ContinueOnError "Keep processing even if a repo fails"
-Show-Switch "ShowGitStatus" $ShowGitStatus "Display git status summary for each repo"
-Show-Switch "PauseBetweenRepos" $PauseBetweenRepos "Pause after every repository"
-Show-Switch "OnlyShowFailures" $OnlyShowFailures "Only show failed repos in summary"
-Show-Switch "WhatIf" $WhatIf "Dry run mode (no changes made)"
-Show-Switch "NoColor" $NoColor "ANSI colors disabled"
-Write-Hacker "──────────────────────────────────────────────────────`n" "DarkGray"
+$versionLabel   = "v2.7.0"
+$actionLabel    = $Action.ToUpper()
+$bumpLabel      = if ($BumpVersion) { $BumpVersion } else { "N/A" }
+$foldersLabel   = $BaseFolders -join "  |  "
+
+Write-Hacker "  Run Mode  : $actionLabel  |  Bump: $bumpLabel  |  $versionLabel" "Cyan"
+Write-Hacker "  Scanning  : $foldersLabel" "DarkGray"
+Show-Divider
+
+Write-Hacker "  ACTIVE OPTIONS" "Magenta"
+Show-Switch "AutoSwitchGh"    $AutoSwitchGh    "Auto-switch gh CLI account per repo"
+Show-Switch "ContinueOnError" $ContinueOnError "Keep processing after a failure"
+Show-Switch "ShowGitStatus"   $ShowGitStatus   "Show changed-file count per repo"
+Show-Switch "PauseBetween"    $PauseBetweenRepos "Pause between repos"
+Show-Switch "OnlyFailures"    $OnlyShowFailures  "Only report failures in summary"
+Show-Switch "WhatIf (DryRun)" $WhatIf          "Preview only, no changes written"
+Show-Switch "NoColor"         $NoColor         "Plain text output"
+Show-Divider
 
 if ($Confirm) {
-    Write-Hacker "Press ENTER to start or CTRL+C to cancel..." "Yellow"
-    Read-Host
+    Write-Hacker "  Press ENTER to start or Ctrl+C to abort..." "Yellow"
+    $null = Read-Host
 }
 
-# ==================== DISCOVERY ====================
+# ══════════════════════════════════════════════════════════════════════════════
+#  DISCOVERY
+# ══════════════════════════════════════════════════════════════════════════════
+
+Write-Hacker "  DISCOVERING REPOSITORIES" "Cyan"
+
 $repoList = [System.Collections.ArrayList]::new()
 
 foreach ($folder in $BaseFolders) {
     if (Test-Path $folder) {
-        $repos = Get-ChildItem $folder -Directory | Where-Object { Test-Path (Join-Path $_.FullName ".git") }
+        $repos = Get-ChildItem $folder -Directory |
+            Where-Object { Test-Path (Join-Path $_.FullName ".git") }
         foreach ($r in $repos) {
             $account = Get-GitHubAccountFromRepo -RepoPath $r.FullName
             if (-not $account) { $account = (Split-Path $folder -Leaf) }
-            if ([string]::IsNullOrWhiteSpace($account)) { $account = "Unknown" }
+            if ([string]::IsNullOrWhiteSpace($account)) { $account = "unknown" }
             $null = $repoList.Add([PSCustomObject]@{
                 Path    = $r.FullName
                 Name    = $r.Name
                 Account = $account
             })
         }
+        Write-Hacker "  + $folder  ($($repos.Count) repo(s))" "DarkGray"
     } else {
-        Write-Hacker " [WARN] Base folder not found: $folder" "Yellow"
+        Write-Hacker "  ! Folder not found: $folder" "Yellow"
     }
 }
 
 $totalRepos = $repoList.Count
-
-Write-Hacker "Discovered $totalRepos repositories across $($BaseFolders.Count) accounts`n" "Yellow"
+Write-Hacker "" "White"
+Write-Hacker "  Found $totalRepos repositories across $($BaseFolders.Count) location(s)" "Yellow"
+Show-Divider
 
 if ($totalRepos -eq 0) {
-    Write-Hacker "No repositories found. Exiting." "Red"
+    Write-Hacker "  No repositories found. Exiting." "Red"
     return
 }
 
-# ==================== VALIDATION ====================
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODULE LOAD
+# ══════════════════════════════════════════════════════════════════════════════
+
 $modulePath = Join-Path $PSScriptRoot "Git-Sync.psd1"
 if (-not (Test-Path $modulePath)) {
-    Write-Hacker " [ERROR] Missing dependency: Git-Sync module (Git-Sync.psd1)" "Red"
-    Write-Hacker "         Please ensure the Git-Sync module is in the same directory." "Red"
+    Write-Hacker "  [ERROR] Git-Sync module not found at: $modulePath" "Red"
+    Write-Hacker "          Ensure Git-Sync.psd1 is in the same directory." "Red"
     return
 }
-
-# Load the module once (avoids repeated dot-sourcing overhead and console spam)
 Import-Module $modulePath -Force
 
-# ==================== PROCESSING ====================
-$allResults = [System.Collections.ArrayList]::new()
-$processed = 0
-$successCount = 0
-$failCount = 0
-$skipCount = 0
+# ══════════════════════════════════════════════════════════════════════════════
+#  PROCESSING
+# ══════════════════════════════════════════════════════════════════════════════
 
-# Prepare parameter splats for deploy and release (avoids passing unbound params)
-$deployParams = @{}
+Write-Hacker "  PROCESSING" "Cyan"
+Write-Host ""
+
+$allResults   = [System.Collections.ArrayList]::new()
+$processed    = 0
+$successCount = 0
+$failCount    = 0
+$skipCount    = 0
+$startTime    = Get-Date
+
+$deployParams  = @{}
 if ($Force) { $deployParams.Force = $true }
 
 $releaseParams = @{}
 if ($BumpVersion) { $releaseParams.Bump = $BumpVersion }
-if ($Force) { $releaseParams.Force = $true }
+if ($Force)       { $releaseParams.Force = $true }
 
 foreach ($repo in $repoList) {
     $processed++
@@ -242,7 +307,7 @@ foreach ($repo in $repoList) {
     $detectedAccount = $repo.Account
 
     if ($AutoSwitchGh) {
-        Switch-GhAccount -TargetAccount $detectedAccount | Out-Null
+        $null = Switch-GhAccount -TargetAccount $detectedAccount
     }
 
     Push-Location $repo.Path
@@ -252,13 +317,13 @@ foreach ($repo in $repoList) {
             $skipCount++
         } else {
             switch ($Action) {
-                'Deploy' {
+                'Deploy'  {
                     Invoke-GitDeploy -Message "Bulk sync [$detectedAccount]" @deployParams -ErrorAction Stop | Out-Null
                 }
                 'Release' {
                     New-GitRelease @releaseParams -ErrorAction Stop | Out-Null
                 }
-                'Both' {
+                'Both'    {
                     Invoke-GitDeploy -Message "Bulk sync [$detectedAccount]" @deployParams -ErrorAction Stop | Out-Null
                     New-GitRelease @releaseParams -ErrorAction Stop | Out-Null
                 }
@@ -272,10 +337,10 @@ foreach ($repo in $repoList) {
         }
 
         if ($ShowGitStatus) {
-            $statusOutput = git status --short 2>$null
-            if ($statusOutput) {
-                $changeCount = if ($statusOutput -is [array]) { $statusOutput.Count } else { 1 }
-                Write-Hacker "  └─ Changes: $changeCount files" "DarkGray"
+            $stOut = git status --short 2>$null
+            if ($stOut) {
+                $cnt = if ($stOut -is [array]) { $stOut.Count } else { 1 }
+                Write-Hacker "      $cnt changed file(s)" "DarkGray"
             }
         }
 
@@ -286,18 +351,19 @@ foreach ($repo in $repoList) {
         })
     }
     catch {
-        $errorMsg = if ($null -ne $_.Exception.Message) { $_.Exception.Message } else { "Unknown error" }
-        Show-RepoStatus -RepoName $repo.Name -Account $detectedAccount -Status "Failed" -Message $errorMsg
+        $errMsg = if ($_.Exception.Message) { $_.Exception.Message } else { "Unknown error" }
+        Show-RepoStatus -RepoName $repo.Name -Account $detectedAccount -Status "Failed" -Message $errMsg
         $null = $allResults.Add([PSCustomObject]@{
             Account = $detectedAccount
             Repo    = $repo.Name
             Status  = "Failed"
-            Error   = $errorMsg
+            Error   = $errMsg
         })
         $failCount++
 
         if (-not $ContinueOnError) {
-            Write-Hacker "`nStopping due to error. Use -ContinueOnError to keep going." "Red"
+            Write-Host ""
+            Write-Hacker "  Stopped after first failure. Use -ContinueOnError to keep going." "Red"
             break
         }
     }
@@ -306,26 +372,46 @@ foreach ($repo in $repoList) {
     }
 
     if ($PauseBetweenRepos) {
-        Write-Hacker "Press ENTER to continue..." "Yellow"
-        Read-Host
+        Write-Hacker "  Press ENTER for next repo..." "Yellow"
+        $null = Read-Host
     }
 }
 
-# ==================== FINAL SUMMARY ====================
-Write-Hacker "`n══════════════════════════════════════════════════════════════════════════════" "DarkGray"
-Write-Hacker " SYNC COMPLETE" "Green"
-Write-Hacker "══════════════════════════════════════════════════════════════════════════════`n" "DarkGray"
+# ══════════════════════════════════════════════════════════════════════════════
+#  FINAL SUMMARY
+# ══════════════════════════════════════════════════════════════════════════════
 
-Write-Hacker "✓ Successful : $successCount" "Green"
-Write-Hacker "✗ Failed     : $failCount" "Red"
-Write-Hacker "○ Skipped    : $skipCount" "Yellow"
+$elapsed = (Get-Date) - $startTime
+$elapsedStr = "{0:mm}m {0:ss}s" -f $elapsed
 
-if ($failCount -gt 0 -and -not $OnlyShowFailures) {
-    Write-Hacker "`n[ FAILED REPOSITORIES ]" "Red"
+Write-Host ""
+Show-Divider "DarkGray"
+Write-Hacker "  SYNC COMPLETE  —  $elapsedStr" "Green"
+Show-Divider "DarkGray"
+Write-Host ""
+
+$pct = if ($totalRepos -gt 0) { [math]::Round(($successCount / $totalRepos) * 100) } else { 0 }
+
+Write-Hacker "  ✓  Successful  :  $successCount" "Green"
+Write-Hacker "  ✗  Failed      :  $failCount"     "Red"
+Write-Hacker "  ○  Skipped     :  $skipCount"     "Yellow"
+Write-Hacker "  ◉  Total       :  $totalRepos  ($pct%% success rate)" "Cyan"
+Write-Host ""
+
+if ($failCount -gt 0) {
+    Write-Hacker "  FAILED REPOSITORIES" "Red"
+    Show-Divider "Red"
     $allResults | Where-Object Status -eq 'Failed' | ForEach-Object {
-        $err = if ($null -ne $_.Error) { $_.Error } else { "No details" }
-        Write-Hacker "  ✗ $($_.Repo) [$($_.Account)] → $err" "Red"
+        $e = if ($_.Error) { $_.Error } else { "No details" }
+        Write-Hacker "  ✗ $($_.Repo)  @$($_.Account)" "Red" -NoNewline
+        Write-Hacker "  → $e" "DarkGray"
     }
+    Write-Host ""
 }
 
-Write-Hacker "`n[ END OF TRANSMISSION ]`n" "DarkGray"
+if ($LogFile -and (Test-Path $LogFile)) {
+    Write-Hacker "  Log saved to: $LogFile" "DarkGray"
+}
+
+Write-Hacker "  [ END OF TRANSMISSION ]" "DarkGray"
+Write-Host ""

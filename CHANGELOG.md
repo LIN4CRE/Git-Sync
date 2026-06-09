@@ -1,9 +1,34 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to Git-Sync are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Versioning follows [Semantic Versioning](https://semver.org/).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+---
+
+## [2.7.0] - 2026-06-09
+
+### Added
+- **`Sync-GitRepository`** — new convenience function combining `Invoke-GitDeploy` + optional `New-GitRelease` in a single call. Supports `-Path`, `-Message`, `-BumpVersion`, `-Remote`, `-Force`, `-GenerateNotes`.
+- `IconUri` in module manifest pointing to `hacker-icon.png` for PowerShell Gallery listing.
+- Expanded PSData `Tags` in `.psd1`: added `MultiAccount`, `BulkSync`, `SemanticVersioning`, `GitHubCLI`, `CI`, `Release-Automation`.
+- Interactive numbered menu in `start.ps1` with 6 quick-action options and runtime info table.
+- Tests for `Sync-GitRepository` added to test suite.
+
+### Changed
+- **`Sync-AllRepos-Hacker.ps1`**: upgraded banner, 40-char progress bar, per-repo `@account` label, elapsed-time and success-rate display in summary, cleaner section dividers.
+- **`start.ps1`**: full rewrite — environment info (PS version, git, gh), interactive numbered menu.
+- `Export-ModuleMember` expanded to include `Sync-GitRepository` (12 exported functions total).
+- `Git-Sync.psd1` description improved for PowerShell Gallery discoverability.
+- Module header comment corrected: removed duplicate `Get-GitHubAccountFromRepo` entry, accurate function list.
+- Output polish in `Invoke-GitDeploy` and `New-GitRelease` (`+` / `-` / `~` prefix icons).
+- `README.md` rewritten: full feature table, complete API reference, all QoL switches documented.
+
+### Removed
+- `AUDIT-REPORT.md` — duplicate of `AUDIT_REPORT.md`.
+- `git-automation-enhanced.ps1` — deprecated legacy wrapper (use `Import-Module Git-Sync.psd1` directly).
+
+---
 
 ## [2.6.0] - 2026-06-07
 
@@ -18,89 +43,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore` now excludes `TestResults.xml`, `Coverage.xml`, `.local/`, `modules/`, and `secrets/`.
 - Split CI/CD workflows: `build.yml`, `test.yml`, `security.yml`, `release.yml` replacing single `ci.yml`.
 - `dependabot.yml` and `.github/ISSUE_TEMPLATE/config.yml` for automated dependency updates and issue management.
-- `PULL_REQUEST_TEMPLATE.md` with checklist and testing section.
-- `Install.bat`, `Git-Sync.bat`, `Git-Sync-Doctor.bat`, `Git-Sync-Elevated.bat` — Windows batch launchers for quick access.
-- `Test-Environment.ps1` — standalone prereq check for new users.
-- `TROUBLESHOOTING.md` — expanded troubleshooting guide.
-- `ARCHITECTURE.md`, `RELEASE.md`, `SUPPORT.md` — project documentation.
 
 ### Changed
-- Module version bumped from `2.4.0` to `2.6.0` with 11 exported functions.
-- Total Pester tests expanded from 20 to 67 across 4 test files.
-- README now documents all 11 exported functions and split CI/CD workflow structure.
+- `Invoke-GitDeploy` now issues a structured warning when remote connectivity check fails, rather than aborting.
+- `Get-LatestTag` strips `v`/`V` prefix consistently.
+- `New-GitRelease` AutoBump and Manual are separated into distinct parameter sets.
+- Moved module import outside per-repo loop in `Sync-AllRepos-Hacker.ps1` for efficiency.
 
 ### Fixed
-- Consolidated duplicate `repo/` and `Git-Sync/` directory enhancements into root directory.
-- Removed stale `TestResults.xml`, `Coverage.xml` from version control.
-- `.gitignore` now prevents future commits of test artifacts and dependency caches.
+- `LogFile` relative path resolution and directory auto-creation in `Sync-AllRepos-Hacker.ps1`.
+- Success/skip/fail counting to avoid misleading totals.
+- Double error/warning messages in helper functions.
+- GitHub username regex updated to allow hyphens (`some-user`).
+- `New-GitRelease` parameter binding between `AutoBump` and `Manual` sets.
 
-## [2.4.0] - 2026-06-06
+---
+
+## [2.5.0] - 2026-06-01
 
 ### Added
-- Packaged core automation logic as a proper PowerShell module (`Git-Sync.psm1` / `Git-Sync.psd1`).
-- `build.ps1` — one-step build script that unblocks files, installs dependencies, runs `PSScriptAnalyzer`, and executes `Pester` tests.
-- `PSScriptAnalyzerSettings.psd1` — centralized analyzer configuration.
-- `.gitattributes` — line-ending normalization for cross-platform collaboration.
+- Bulk sync orchestrator in `Sync-AllRepos-Hacker.ps1` with hacker-style progress bars and per-repo status icons.
+- QoL flags: `ContinueOnError`, `ShowGitStatus`, `PauseBetweenRepos`, `OnlyShowFailures`, `NoColor`, `LogFile`.
+- Pester 5 test suite: 67 tests across 4 files, ≥80% coverage enforced in CI.
+- GitHub Actions workflows: `build.yml`, `test.yml`, `security.yml`, `release.yml`.
+- `PSScriptAnalyzerSettings.psd1` for project-specific lint configuration.
 
 ### Changed
-- `git-automation-enhanced.ps1` is now a backward-compatible wrapper that imports the `Git-Sync` module.
-- `Sync-AllRepos-Hacker.ps1` now imports the module via `Import-Module` instead of dot-sourcing the script file.
-- `tests/Git-Sync.Tests.ps1` now dot-sources `Git-Sync.psm1` directly for reliable Pester mocking.
-- Documentation updated to cover `build.ps1`, `Unblock-File`, and the PowerShell module.
+- Module renamed from *Git-Multi-Sync* to **Git-Sync**.
+- `New-GitRelease` now calls `Invoke-GitDeploy` internally before tagging.
+- Repository published to PowerShell Gallery as `Git-Sync`.
 
-### Fixed
-- Test-discovery `PSSecurityException` caused by missing `Unblock-File` step is now handled automatically by `build.ps1` and documented prominently.
+---
 
-## [2.3.0] - 2026-06-06
-
-### Fixed
-- **Critical**: `New-GitRelease` parameter binding — replaced ambiguous mandatory `Version` with explicit `AutoBump` / `Manual` parameter sets so bulk scripts no longer prompt interactively or throw binding errors.
-- **Critical**: `Sync-AllRepos-Hacker.ps1` was passing `Bump` (via splatting) to `Invoke-GitDeploy`, which does not accept it. Split into `$deployParams` and `$releaseParams` to avoid `ParameterBindingException`.
-- `Get-LatestTag` now strips leading `v` / `V` prefixes so tags like `v1.0.0` do not break `Get-NextVersion`.
-- `Get-NextVersion` now defaults gracefully to `0.0.0` when an existing tag does not follow strict SemVer.
-- `Get-GitHubAccountFromRepo` regex updated to allow hyphens in GitHub usernames (e.g., `some-user`).
-- Repository discovery changed from `Get-ChildItem -Recurse` to immediate children only, preventing accidental inclusion of nested `.git` directories (submodules, build tools, etc.).
-- `LogFile` path is now resolved to an absolute path at startup, and parent directories are created automatically so logging does not silently fail or write into the wrong repo folder.
-- `Switch-GhAccount` now guards against empty `$TargetAccount` values to prevent malformed `gh auth switch` calls.
-- Removed duplicate error/warning messages from `Test-GitRepository`, `Test-GitRemoteConnectivity`, and `Get-NextVersion` so callers and helpers do not repeat the same message.
-- `Invoke-GitDeploy` staging check rewritten for clarity (`git diff --cached --quiet` + `$LASTEXITCODE`).
-- `New-GitRelease` now explicitly checks `gh` exit code after `gh release create` and warns instead of falsely claiming success.
-- `Force` switch now actually works:
-  - `Invoke-GitDeploy` uses `--force-with-lease` when `-Force` is passed.
-  - `New-GitRelease` uses `git tag -f` and `git push --force` when `-Force` is passed.
-- Removed `Write-Host` end-of-script message from `git-automation-enhanced.ps1` so dot-sourcing it in a loop no longer spams the console.
-- Moved `. $depScript` outside the per-repo loop to reduce overhead and console noise.
-- `Sync-AllRepos-Hacker.ps1` now correctly tracks `Skipped` vs `Success` counts instead of counting skipped repos as successful.
-- `Create-DesktopShortcut.ps1` now validates `$ShortcutName` with `ValidateNotNullOrEmpty` and uses `try/catch` around COM object creation.
+## [2.0.0] - 2026-05-15
 
 ### Added
-- `.gitignore` covering logs, PowerShell artifacts, OS files, and build output.
-- `Set-StrictMode -Version Latest` to all production scripts for stricter error detection.
-- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `INSTALLATION.md`.
-- GitHub Actions CI workflow (`PSScriptAnalyzer` + `Pester`).
-- Pester unit tests (`tests/Git-Sync.Tests.ps1`) mocking Git commands.
-- README badges, build instructions, and security / CoC links.
+- `New-GitRelease` with `AutoBump` and `Manual` parameter sets.
+- `Invoke-GitDeploy` with `Force` (`--force-with-lease`) and `WhatIf` support.
+- `Get-NextVersion` supporting Major / Minor / Patch bumps and prerelease suffix.
+- Initial PowerShell Gallery publication.
 
-### Removed
-- Deleted committed binary artifact `Git-Multi-Sync.zip` (legacy release bundle that duplicated source files).
+---
 
-## [2.2.0] - 2026-06-05
-
-### Fixed
-- Added missing `Test-GitRemoteConnectivity` function (previously referenced but not defined).
-- Corrected `GH_HOST` misuse in `Switch-GhAccount` (now uses `gh auth switch --user`).
-- Fixed `$GenerateNotes` switch default (removed misleading `= $true`).
-- Improved empty changeset detection and null-safety on version parsing.
-- Optimized array building with `ArrayList` for large repo collections.
-- Added `-NoColor` switch support throughout the UI.
-- Added `-Remove` switch to `Create-DesktopShortcut.ps1`.
-
-## [2.1.0] - 2026-06-05
+## [1.0.0] - 2026-04-01
 
 ### Added
-- Initial public release of `Git-Sync` (formerly `Git-Multi-Sync`).
-- `Sync-AllRepos-Hacker.ps1` with hacker-style UI, progress bars, and bulk operations.
-- `git-automation-enhanced.ps1` with `Invoke-GitDeploy`, `New-GitRelease`, and smart versioning.
-- `Create-DesktopShortcut.ps1` for one-click Windows desktop shortcuts.
-- `README.md` with quick-start, QoL switch table, and folder structure recommendations.
-- `LICENSE` under MIT.
+- Initial release of the Git deployment automation script.
+- Basic `git add`, `commit`, `push` wrapper.

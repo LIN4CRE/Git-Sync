@@ -1,27 +1,27 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Enhanced Git deployment and release automation with smart versioning and advanced error handling.
 
 .DESCRIPTION
     Production-grade module with:
-    - Smart semantic version bumping (auto-increment patch/minor/major)
-    - Comprehensive error handling and recovery
-    - Multi-account GitHub support ready
-    - Bulk operations support
+    - Smart semantic version bumping (auto-increment Patch/Minor/Major with prerelease support)
+    - Comprehensive error handling and recovery with rollback guidance
+    - Multi-account GitHub support with automatic gh CLI account switching
+    - Bulk sync orchestration across multiple repositories
+    - Environment diagnostics (Test-GitSyncEnvironment)
 
 .VERSION
-    2.6.0 - 2026-06-07
-    - 11 exported functions: Get-NextVersion, Get-LatestTag, New-GitRelease, Invoke-GitDeploy,
-      Get-GitHubAccountFromRepo, Switch-GhAccount, Test-GitSyncEnvironment, Get-GitHubRepo,
-      Get-GitHubAccountFromRepo, Sync-GitRepository, Invoke-GitHubRelease
-    - Multi-account GitHub support with automatic gh CLI account switching
-    - Environment doctor (Test-GitSyncEnvironment) validates PowerShell, Git, gh, and module state
-    - Smart git status checking before deploy/release operations
-    - CmdletBinding and SupportsShouldProcess on all public functions
-    - Comprehensive error handling with structured warnings and catch-block coverage
-    - Bulk sync orchestrator, account extraction from remote URLs (HTTPS + SSH)
-    - 67 Pester tests across 4 test files, 80%+ code coverage, enforced in CI
+    2.7.0 - 2026-06-09
+    - Added Sync-GitRepository: convenience wrapper combining deploy + optional release
+    - Fixed duplicate Get-GitHubAccountFromRepo reference in module header
+    - Improved Write-Host output consistency and color usage
+    - Version bump and CHANGELOG updated
+    Exported functions (12):
+      Get-NextVersion, Get-LatestTag, New-GitRelease, Invoke-GitDeploy,
+      Get-GitHubAccountFromRepo, Switch-GhAccount, Test-GitSyncEnvironment,
+      Test-GitRepository, Test-GitRemoteConnectivity, Invoke-GitCommand,
+      Test-GhAuthentication, Sync-GitRepository
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -180,19 +180,19 @@ function Invoke-GitDeploy {
 
             if ($hasChanges) {
                 Invoke-GitCommand -Arguments @('commit', '-m', $Message) -ErrorMessage "Commit failed"
-                Write-Host "✓ Commit created" -ForegroundColor Green
+                Write-Host "  + Commit created" -ForegroundColor Green
             } else {
-                Write-Host "No changes to commit" -ForegroundColor Yellow
+                Write-Host "  - No changes to commit" -ForegroundColor Yellow
             }
 
             $pushArgs = @('push', $Remote)
             if ($Force) { $pushArgs += '--force-with-lease' }
             Invoke-GitCommand -Arguments $pushArgs -ErrorMessage "Push failed"
-            Write-Host "✓ Deployed successfully to $Remote" -ForegroundColor Green
+            Write-Host "  + Deployed to $Remote" -ForegroundColor Green
         }
         catch {
             Write-Error "Deploy failed: $_"
-            Write-Host "Tip: Run 'git status' to check current state" -ForegroundColor Cyan
+            Write-Host "  Tip: Run 'git status' to check current state" -ForegroundColor Cyan
             throw
         }
     }
@@ -218,7 +218,7 @@ function New-GitRelease {
         if ($PSCmdlet.ParameterSetName -eq 'AutoBump') {
             $latestTag = Get-LatestTag
             $Version = Get-NextVersion -CurrentVersion $latestTag -Bump $Bump
-            Write-Host "Auto-bumped to version: $Version" -ForegroundColor Cyan
+            Write-Host "  ~ Auto-bumped to version: $Version" -ForegroundColor Cyan
         }
 
         if (-not $Message) { $Message = "Release $Version" }
@@ -252,26 +252,24 @@ function New-GitRelease {
 
                 & gh @ghArgs
                 if ($LASTEXITCODE -ne 0) {
-                    Write-Warning "GitHub release creation failed (exit code $LASTEXITCODE). The tag has been pushed successfully."
+                    Write-Warning "GitHub release creation failed (exit code $LASTEXITCODE). Tag has been pushed successfully."
                 } else {
-                    Write-Host "✓ GitHub Release v$Version created!" -ForegroundColor Green
+                    Write-Host "  + GitHub Release v$Version created!" -ForegroundColor Green
                 }
             }
 
-            Write-Host "✓ Release v$Version completed successfully!" -ForegroundColor Green
+            Write-Host "  + Release v$Version completed successfully!" -ForegroundColor Green
         }
         catch {
             Write-Error "Release failed: $_"
-
-            Write-Host "`nRollback commands:" -ForegroundColor Yellow
-            Write-Host " git tag -d $Version" -ForegroundColor Cyan
-            Write-Host " git push $Remote :refs/tags/$Version" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "  Rollback commands:" -ForegroundColor Yellow
+            Write-Host "    git tag -d $Version" -ForegroundColor Cyan
+            Write-Host "    git push $Remote :refs/tags/$Version" -ForegroundColor Cyan
             throw
         }
     }
 }
-
-#endregion module core functions
 
 function Get-GitHubAccountFromRepo {
     [CmdletBinding()]
@@ -481,11 +479,17 @@ function Test-GitSyncEnvironment {
         Write-Host " Git-Sync Environment Doctor " -ForegroundColor White -BackgroundColor DarkBlue
         Write-Host ""
         foreach ($c in $checks) {
-            $icon, $color = switch ($c.Status) {
-                'Pass' { '[ OK ]',   'Green' }
-                'Warn' { '[WARN]',   'Yellow' }
-                'Fail' { '[FAIL]',   'Red' }
-                default { '[ ?? ]',  'Gray' }
+            $icon  = switch ($c.Status) {
+                'Pass'  { '[ OK ]'  }
+                'Warn'  { '[WARN]'  }
+                'Fail'  { '[FAIL]'  }
+                default { '[ ?? ]'  }
+            }
+            $color = switch ($c.Status) {
+                'Pass'  { 'Green'  }
+                'Warn'  { 'Yellow' }
+                'Fail'  { 'Red'    }
+                default { 'Gray'   }
             }
             Write-Host (" {0} {1,-26} " -f $icon, $c.Name) -ForegroundColor $color -NoNewline
             Write-Host $c.Detail
@@ -513,4 +517,72 @@ function Test-GitSyncEnvironment {
     }
 }
 
-Export-ModuleMember -Function Get-NextVersion, Test-GitRepository, Test-GitRemoteConnectivity, Invoke-GitCommand, Test-GhAuthentication, Get-LatestTag, Invoke-GitDeploy, New-GitRelease, Get-GitHubAccountFromRepo, Switch-GhAccount, Test-GitSyncEnvironment
+function Sync-GitRepository {
+    <#
+    .SYNOPSIS
+        Convenience wrapper: stage, commit, push, and optionally create a release tag.
+
+    .DESCRIPTION
+        Combines Invoke-GitDeploy and (optionally) New-GitRelease into a single call.
+        Designed for use in bulk-sync pipelines or quick one-liner workflows.
+
+    .PARAMETER Path
+        The repository path to sync. Defaults to the current directory.
+
+    .PARAMETER Message
+        Commit message. Defaults to a timestamp.
+
+    .PARAMETER BumpVersion
+        If specified, creates a new release after deploying. One of Patch, Minor, Major.
+
+    .PARAMETER Remote
+        The Git remote to push to. Defaults to 'origin'.
+
+    .PARAMETER Force
+        Force-push and overwrite existing tags.
+
+    .PARAMETER GenerateNotes
+        Pass --generate-notes to the GitHub release (requires gh CLI).
+
+    .EXAMPLE
+        Sync-GitRepository -Path C:\repos\MyProject -BumpVersion Patch
+    #>
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [string]$Path = (Get-Location).Path,
+        [string]$Message = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'),
+        [ValidateSet('Patch','Minor','Major')]
+        [string]$BumpVersion,
+        [string]$Remote = 'origin',
+        [switch]$Force,
+        [switch]$GenerateNotes
+    )
+
+    $prevLocation = Get-Location
+    try {
+        Set-Location -LiteralPath $Path
+
+        Invoke-GitDeploy -Message $Message -Remote $Remote -Force:$Force
+
+        if ($BumpVersion) {
+            New-GitRelease -Bump $BumpVersion -Remote $Remote -Force:$Force -GenerateNotes:$GenerateNotes
+        }
+    }
+    finally {
+        Set-Location $prevLocation
+    }
+}
+
+Export-ModuleMember -Function `
+    Get-NextVersion, `
+    Test-GitRepository, `
+    Test-GitRemoteConnectivity, `
+    Invoke-GitCommand, `
+    Test-GhAuthentication, `
+    Get-LatestTag, `
+    Invoke-GitDeploy, `
+    New-GitRelease, `
+    Get-GitHubAccountFromRepo, `
+    Switch-GhAccount, `
+    Test-GitSyncEnvironment, `
+    Sync-GitRepository

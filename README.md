@@ -1,8 +1,8 @@
 # Git-Sync
 
-**Powerful multi-account Git automation toolkit** with smart versioning, bulk operations, and a beautiful hacker-style terminal UI.
+**Powerful multi-account Git automation toolkit** — bulk sync, smart semantic versioning, automatic GitHub CLI account switching, and a hacker-style terminal UI.
 
-> **Note:** This project was previously known as *Git-Multi-Sync*. All functionality remains the same — the name has been simplified to **Git-Sync**. If you have an older clone, please update your remotes:
+> **Previously known as** *Git-Multi-Sync*. All functionality is preserved. If you have an older clone, update your remote:
 > ```bash
 > git remote set-url origin https://github.com/LIN4CRE/Git-Sync.git
 > ```
@@ -11,273 +11,191 @@
 
 ## Features
 
-- ✅ **Smart Semantic Versioning** – Auto bump Patch / Minor / Major with prerelease support
-- ✅ **Multi-Account Support** – Automatically detect and switch between GitHub accounts per repo
-- ✅ **Hacker-Style UI** – Progress bars, status ticks, and clean output
-- ✅ **QoL Switches** – Continue on error, logging, pause between repos, and more
-- ✅ **One-Click Desktop Shortcut** – Run bulk sync with a single click
-- ✅ **Full Logging Mode** – Silent operation with detailed log files
-- ✅ **Dry Run Mode** – Preview what would happen without making changes
-- ✅ **Automatic Rollback Guidance** – Clear instructions if a release fails part-way
-- ✅ **Environment Doctor** – Diagnose and validate your system setup with `Test-GitSyncEnvironment`
-- ✅ **Account Switcher** – Seamlessly switch GitHub CLI accounts per repository with `Switch-GhAccount`
+| Feature | Details |
+|---|---|
+| **Smart Semantic Versioning** | Auto-bump Patch / Minor / Major with prerelease (`-beta.1`) support |
+| **Multi-Account GitHub** | Auto-detect and switch `gh` CLI accounts per repository |
+| **Hacker-Style Terminal UI** | Progress bars, color-coded status, animated sync output |
+| **Bulk Sync Orchestrator** | Scan folders, discover repos, process in one shot |
+| **One-Liner API** | `Sync-GitRepository` wraps deploy + release in a single call |
+| **Dry Run / WhatIf** | Preview everything before touching any repository |
+| **Environment Doctor** | `Test-GitSyncEnvironment` diagnoses PS, Git, gh, and module health |
+| **Logging Mode** | `‑LogFile path.log` for CI-friendly silent output |
+| **QoL Flags** | ContinueOnError, ShowGitStatus, PauseBetweenRepos, NoColor, Confirm |
+| **12 Exported Functions** | Full PowerShell module with CmdletBinding + SupportsShouldProcess |
+| **80%+ Test Coverage** | 67 Pester 5 tests across 4 files, enforced in CI |
 
 ---
 
 ## Quick Start
 
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/LIN4CRE/Git-Sync.git
-cd Git-Sync
-```
-
-### 2. Unblock scripts (Windows)
-
-Right-click each `.ps1` file → **Properties** → check **Unblock** (if present).
-
-Alternatively, run:
+### 1. Install from PowerShell Gallery
 
 ```powershell
-Get-ChildItem *.ps1 | Unblock-File
+Install-Module Git-Sync -Scope CurrentUser
+Import-Module Git-Sync
 ```
 
-### 3. Run the Hacker UI (Recommended)
+### 2. Or clone and import directly
+
+```powershell
+git clone https://github.com/LIN4CRE/Git-Sync.git
+cd Git-Sync
+Import-Module .\Git-Sync.psd1
+```
+
+### 3. Bulk sync all repos (hacker UI)
 
 ```powershell
 .\Sync-AllRepos-Hacker.ps1 -Action Both -BumpVersion Patch -AutoSwitchGh
 ```
 
-### Common Commands
+### 4. Sync a single repo (module API)
 
 ```powershell
-# Full sync with auto account switching + logging
-.\Sync-AllRepos-Hacker.ps1 -Action Both -BumpVersion Minor -AutoSwitchGh -LogFile "sync.log"
+# Deploy only (add + commit + push)
+Invoke-GitDeploy -Message "feat: my change"
 
-# Dry run (safe preview)
-.\Sync-AllRepos-Hacker.ps1 -Action Both -WhatIf
+# Deploy + create a Patch release tag
+Sync-GitRepository -BumpVersion Patch
 
-# Only show failures + continue on error
-.\Sync-AllRepos-Hacker.ps1 -Action Release -OnlyShowFailures -ContinueOnError
-
-# Create desktop shortcut
-.\Create-DesktopShortcut.ps1
+# Explicit version release
+New-GitRelease -Version "2.0.0" -GenerateNotes
 ```
 
 ---
 
-## QoL Switches
+## Module API (12 Functions)
 
-| Switch | Description |
+| Function | Purpose |
 |---|---|
-| `-AutoSwitchGh` | Automatically switch GitHub CLI (`gh`) accounts per repo |
-| `-ContinueOnError` | Keep going if one repo fails |
-| `-ShowGitStatus` | Show changed files per repo |
-| `-PauseBetweenRepos` | Pause after each repository |
-| `-OnlyShowFailures` | Cleaner output (failures only) |
-| `-LogFile "sync.log"` | Write full output to log file |
-| `-WhatIf` | Dry run mode |
-| `-Confirm` | Ask before starting |
-| `-NoColor` | Disable ANSI colors (for log files / CI) |
-| `-Force` | Overwrite existing tags and use `--force-with-lease` on push |
+| `Sync-GitRepository` | Deploy + optional release in one call |
+| `Invoke-GitDeploy` | Stage → commit → push |
+| `New-GitRelease` | Create an annotated tag + GitHub release |
+| `Get-NextVersion` | Compute next semantic version string |
+| `Get-LatestTag` | Read the latest `git tag` (strips `v` prefix) |
+| `Test-GitSyncEnvironment` | Full environment health check |
+| `Switch-GhAccount` | Switch the active `gh` CLI account |
+| `Get-GitHubAccountFromRepo` | Extract GitHub username from remote URL |
+| `Test-GitRepository` | Check if CWD is inside a git repo |
+| `Test-GitRemoteConnectivity` | Probe remote reachability |
+| `Invoke-GitCommand` | Low-level git wrapper with error handling |
+| `Test-GhAuthentication` | Check `gh auth status` |
 
 ---
 
-## Folder Structure (Recommended)
+## Bulk Sync — Hacker UI
 
-```
-D:\
-├── LIN4CRE\
-│   ├── repo1\
-│   ├── repo2\
-│   └── ...
-└── DLinacre\
-    ├── repoA\
-    └── repoB\
-```
-
-The tool automatically detects which account each repo belongs to by inspecting the Git remote URL.
-
----
-
-## Requirements
-
-- **PowerShell 5.1 or 7+** (Windows)
-- **Git** for Windows
-- **GitHub CLI (`gh`)** – required for `-AutoSwitchGh` and release creation
-
-> This toolkit is designed primarily for Windows environments. Linux/macOS users may need to adapt paths and the desktop shortcut script.
-
----
-
-## Installation
-
-See [INSTALLATION.md](INSTALLATION.md) for detailed setup instructions, including environment configuration, Git installation, and `gh` CLI multi-account setup.
-
----
-
-## Desktop Shortcut
-
-Run once to create a one-click desktop icon:
+`Sync-AllRepos-Hacker.ps1` discovers every Git repository under your configured `BaseFolders`, auto-detects the GitHub account for each, optionally switches the `gh` CLI, and runs deploy + release with a live progress bar.
 
 ```powershell
-.\Create-DesktopShortcut.ps1
+# Deploy only, keep going on error
+.\Sync-AllRepos-Hacker.ps1 -Action Deploy -ContinueOnError
+
+# Full release with auto-patch bump, dry run first
+.\Sync-AllRepos-Hacker.ps1 -Action Both -BumpVersion Patch -WhatIf
+
+# Silent mode with full log
+.\Sync-AllRepos-Hacker.ps1 -Action Deploy -LogFile .\sync.log
+
+# Target specific folders
+.\Sync-AllRepos-Hacker.ps1 -BaseFolders "C:\Projects","C:\Work" -Action Deploy
 ```
 
-To remove the shortcut later:
+### QoL Switches
 
-```powershell
-.\Create-DesktopShortcut.ps1 -Remove
-```
-
----
-
-## Easy Customization (Change Commands & Folders)
-
-Everything is designed to be **easy to edit**.
-
-### Change Default Folders
-
-Open `Sync-AllRepos-Hacker.ps1` and edit this line near the top:
-
-```powershell
-[string[]]$BaseFolders = @("D:\LIN4CRE", "D:\DLinacre"),
-```
-
-Just change the paths to match your setup. Out-of-the-box it's configured for **LIN4CRE** and **DLinacre**.
-
-### Change Default Action
-
-You can also set a different default `Action`:
-
-```powershell
-[string]$Action = 'Both',     # Options: Deploy, Release, Both
-```
-
-### Example Configurations
-
-**Minimal setup (one account only):**
-```powershell
-[string[]]$BaseFolders = @("D:\MyRepos")
-```
-
-**Three accounts:**
-```powershell
-[string[]]$BaseFolders = @("D:\Work", "D:\Personal", "D:\OpenSource")
-```
-
----
-
-## Logging Mode (Silent)
-
-```powershell
-.\Sync-AllRepos-Hacker.ps1 -Action Both -LogFile "C:\Logs\sync-$(Get-Date -Format yyyyMMdd).log"
-```
-
-Log files are also auto-generated in the script directory. See `*.log` files for full output.
-
----
-
-## Troubleshooting
-
-| Problem | Solution |
+| Switch | Effect |
 |---|---|
-| `gh auth switch` fails | Ensure you are logged in to all accounts: `gh auth login` for each one. |
-| Release says "already exists" | Use `-Force` to overwrite, or delete the existing tag first. |
-| No repos discovered | Check that `$BaseFolders` paths are correct and repos contain a `.git` folder. |
-| Colors look wrong in your terminal | Use `-NoColor` to disable ANSI escape codes. |
-| Script won't run | Check execution policy: `Get-ExecutionPolicy`. If files are blocked, run `Unblock-File` on them. For a single session, use `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`. |
-| Missing dependency `git-automation-enhanced.ps1` | Ensure all files are kept in the same directory. |
+| `-AutoSwitchGh` | Switch `gh` CLI account per repository automatically |
+| `-ContinueOnError` | Don't abort on first failure |
+| `-ShowGitStatus` | Show changed-file count per repo |
+| `-PauseBetweenRepos` | Interactive pause after each repository |
+| `-OnlyShowFailures` | Suppress per-repo output; show only failures |
+| `-WhatIf` | Dry run — discover but make no changes |
+| `-NoColor` | Disable ANSI colors for plain-text logging |
+| `-Confirm` | Require ENTER before processing begins |
+| `-LogFile <path>` | Write timestamped log alongside console output |
+
+---
+
+## Environment Doctor
+
+```powershell
+Test-GitSyncEnvironment
+```
+
+Checks:
+- PowerShell version (5.1 minimum, 7+ recommended)
+- Execution policy
+- `git` CLI presence and version
+- `gh` CLI presence and authentication
+- Module manifest validity
+- Windows Zone.Identifier file-block status
+
+```
+ Git-Sync Environment Doctor
+
+ [ OK ] PowerShell version          PowerShell 7.5.1
+ [ OK ] Execution policy            Effective: Bypass
+ [ OK ] git CLI                     git version 2.47.0
+ [WARN] gh CLI (optional)           gh installed but not authenticated
+ [ OK ] Git-Sync module             Loaded version 2.7.0
+ [ OK ] File unblock status         Not on Windows; Zone.Identifier not applicable
+
+ Result: HEALTHY  (1 warning(s), 0 failure(s))
+```
 
 ---
 
 ## Build & Test
 
-We provide a `build.ps1` script that handles unblocking, linting, and testing in one step.
-
 ```powershell
-# Run the full build (unblocks files, installs dependencies, runs linter + tests)
+# Full build: lint + test
 .\build.ps1
 
-# Skip tests or linter if you only need one step
-.\build.ps1 -SkipTest
+# Skip linting
 .\build.ps1 -SkipAnalyze
+
+# Skip tests
+.\build.ps1 -SkipTest
 ```
 
-Or run Pester directly after unblocking files:
+Tests are in `tests/` using **Pester 5** with ≥80% code coverage enforced in CI.
+
+---
+
+## Installation (Windows desktop)
 
 ```powershell
-Get-ChildItem *.ps1, *.psm1, *.psd1 | Unblock-File
-Import-Module Pester -Force
-Invoke-Pester -Path .\tests\Git-Sync.Tests.ps1
+.\Install.bat          # installs module to CurrentUser scope, creates shortcuts
+.\Git-Sync.bat         # run Sync-AllRepos-Hacker.ps1 with execution policy bypass
+.\Git-Sync-Doctor.bat  # run Test-GitSyncEnvironment
+.\Git-Sync-Menu.bat    # interactive menu launcher
 ```
 
-CI pipelines are included under `.github/workflows/` — with separate workflows for **build**, **test**, **security**, and **release** — to run `PSScriptAnalyzer`, `Pester` tests, and security scans on every push and pull request.
+---
 
-### PowerShell Module (Advanced)
+## Requirements
 
-The core functions are packaged as a proper PowerShell module (`Git-Sync.psd1` / `Git-Sync.psm1`). You can import it directly for use in your own scripts:
-
-```powershell
-Import-Module .\Git-Sync.psd1 -Force
-Get-Command -Module Git-Sync
-```
-
-### Exported Functions (v2.6.0)
-
-| Function | Description |
-|---|---|
-| `Get-NextVersion` | Computes the next semantic version (Patch, Minor, Major) |
-| `Test-GitRepository` | Checks whether the current directory is a Git repository |
-| `Test-GitRemoteConnectivity` | Tests connectivity to a Git remote |
-| `Invoke-GitCommand` | Runs a git command and returns structured output |
-| `Test-GhAuthentication` | Verifies GitHub CLI authentication status |
-| `Get-LatestTag` | Retrieves the latest version tag from the repository |
-| `Invoke-GitDeploy` | Stages, commits, and pushes changes to a remote |
-| `New-GitRelease` | Creates a GitHub release with automatic or manual versioning |
-| `Get-GitHubAccountFromRepo` | Extracts the GitHub account name from a repo's remote URL |
-| `Switch-GhAccount` | Switches the active GitHub CLI account |
-| `Test-GitSyncEnvironment` | Runs system diagnostics to verify all prerequisites
+| Tool | Version | Required for |
+|---|---|---|
+| PowerShell | 5.1+ (7+ recommended) | Everything |
+| Git | Any modern | All git operations |
+| gh CLI | Any | Multi-account switching & GitHub releases |
 
 ---
 
-## Contributing
+## CI/CD
 
-Pull requests welcome! This tool was built to make managing multiple GitHub accounts effortless.
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, branch naming, and the pull request process.
-
-1. Fork the repo
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes.
-
----
-
-## Security
-
-If you discover a security vulnerability, please review our [SECURITY.md](SECURITY.md) for disclosure guidelines.
-
----
-
-## Code of Conduct
-
-This project adheres to the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `build.yml` | Push / PR to main | PSScriptAnalyzer lint + manifest validation + syntax check |
+| `test.yml` | Push / PR | Pester 5 tests on Windows + Linux, ≥80% coverage |
+| `security.yml` | Push / PR | CodeQL + Gitleaks + dependency review |
+| `release.yml` | `v*.*.*` tag push | Verify → publish to PowerShell Gallery + GitHub Release |
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-**Made for developers who manage multiple accounts.** 🚀
+[MIT](LICENSE) © 2026 LIN4CRE

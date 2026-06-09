@@ -25,7 +25,9 @@ desktop.ini
 
 # Build output
 out/
-dist/
+# dist/ is tracked for release artifacts
+dist/*.exe
+dist/*.nupkg
 
 # Pester test results
 testResults/
@@ -33,6 +35,7 @@ testResults/
 # Coverage reports (auto-generated, should not be committed)
 TestResults/
 coverage/
+coverage.xml
 
 # Dependencies (no package manager needed for PowerShell modules)
 .local/

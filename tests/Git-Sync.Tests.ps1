@@ -196,3 +196,67 @@ Describe 'New-GitRelease' {
         } | Should -Not -Throw
     }
 }
+
+Describe 'Sync-GitRepository' {
+    It 'Should deploy without release when no BumpVersion given' {
+        $m = Get-Module Git-Sync
+        $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("sync-" + [guid]::NewGuid())
+        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+        try {
+            {
+                & $m {
+                    param($p)
+                    function script:git {
+                        if ($args -contains 'rev-parse')  { $script:LASTEXITCODE = 0; return 'true' }
+                        if ($args -contains 'ls-remote')  { $script:LASTEXITCODE = 0; return '' }
+                        if ($args -contains 'diff')       { $script:LASTEXITCODE = 0; return '' }
+                        $script:LASTEXITCODE = 0; return ''
+                    }
+                    Sync-GitRepository -Path $p -Message 'test'
+                } $tmp
+            } | Should -Not -Throw
+        }
+        finally { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+
+    It 'Should include release when BumpVersion is supplied' {
+        $m = Get-Module Git-Sync
+        $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("sync-" + [guid]::NewGuid())
+        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+        try {
+            {
+                & $m {
+                    param($p)
+                    function script:git {
+                        $script:LASTEXITCODE = 0
+                        if ($args -contains 'rev-parse')  { return 'true' }
+                        if ($args -contains 'ls-remote')  { return '' }
+                        if ($args -contains 'diff')       { return '' }
+                        if ($args -contains 'describe')   { return 'v1.0.0' }
+                        if ($args -contains 'tag')        { return '' }
+                        return ''
+                    }
+                    function script:gh { $script:LASTEXITCODE = 0; return 'ok' }
+                    Sync-GitRepository -Path $p -BumpVersion Patch -Message 'test'
+                } $tmp
+            } | Should -Not -Throw
+        }
+        finally { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+
+    It 'Restores original location even when deploy throws' {
+        $m = Get-Module Git-Sync
+        $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("sync-" + [guid]::NewGuid())
+        New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+        $before = (Get-Location).Path
+        try {
+            & $m {
+                param($p)
+                function script:git { $script:LASTEXITCODE = 1; throw 'simulated' }
+                try { Sync-GitRepository -Path $p -Message 'test' -ErrorAction Stop } catch {}
+            } $tmp
+            (Get-Location).Path | Should -Be $before
+        }
+        finally { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}

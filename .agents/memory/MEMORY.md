@@ -1,0 +1,2 @@
+- [pwsh-in-bash](pwsh-in-bash.md) — pwsh always hangs in bash tool (no TTY); run it via the workflow + getWorkflowStatus polling instead.
+- [pester-install](pester-install.md) — Install-Module hangs in bash; extract nupkg via Python zipfile to ~/.local/share/powershell/Modules/<Name>/<Ver>/ then load with full path.
