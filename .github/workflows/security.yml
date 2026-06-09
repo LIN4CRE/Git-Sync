@@ -59,7 +59,7 @@ jobs:
           fetch-depth: 0  # full history so leaks in older commits are caught
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # GITLEAKS_LICENSE is optional; without it Gitleaks runs in OSS mode
