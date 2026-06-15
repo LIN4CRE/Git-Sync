@@ -34,7 +34,7 @@ jobs:
       matrix:
         language: [actions]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -54,7 +54,7 @@ jobs:
     name: Gitleaks (secret scan)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # full history so leaks in older commits are caught
 
@@ -77,7 +77,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
@@ -98,7 +98,7 @@ jobs:
     name: PowerShell Security Lint
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install PSScriptAnalyzer
         shell: pwsh
@@ -133,7 +133,7 @@ jobs:
     name: Heuristic Secret Sweep
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

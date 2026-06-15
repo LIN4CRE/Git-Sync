@@ -20,7 +20,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install PSScriptAnalyzer
         shell: pwsh
@@ -46,7 +46,7 @@ jobs:
     name: Module Manifest Validation
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Test-ModuleManifest
         shell: pwsh
@@ -76,7 +76,7 @@ jobs:
     name: PowerShell Parse Check
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Parse all PowerShell files
         shell: pwsh
